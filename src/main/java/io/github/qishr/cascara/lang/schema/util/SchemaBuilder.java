@@ -19,8 +19,6 @@ public class SchemaBuilder {
         this.resolver = resolver;
         compiler = new CascaraSchemaCompiler(resolver);
         generator = new ClassSchemaGenerator();
-        // generator.registerTypeAnalyzer(new PersistenceTypeAnalyzer());
-
     }
 
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
@@ -28,19 +26,14 @@ public class SchemaBuilder {
     }
 
     public CompiledSchema buildSchema(String name, URI originUri, Class<?>... classes)  {
-
         SimpleMapNode syntheticRoot;
         SimpleDocument syntheticRootDoc;
         CompiledSchema compiledSchema;
-
-        // URI uri = URI.create("cascara://core/schema-service/test");
         SimpleMapNode definitions = new SimpleMapNode();
         syntheticRoot = new SimpleMapNode();
         syntheticRoot.put("definitions", definitions);
         syntheticRoot.put("id", new SimpleScalarNode(originUri));
         syntheticRoot.put("name", new SimpleScalarNode(name));
-
-        // Class<?> schemaClasses[] = new Class<?>[]{ TestLayer.class, TestConcept.class, TestTag.class };
 
         for (Class<?> cls : classes) {
             // Give the generator the synthentic root AST and
@@ -52,6 +45,5 @@ public class SchemaBuilder {
         compiledSchema = compiler.compile(syntheticRootDoc);
 
         return compiledSchema;
-
     }
 }

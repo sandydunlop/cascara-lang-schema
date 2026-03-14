@@ -11,7 +11,8 @@ import io.github.qishr.cascara.common.content.ResourceContent;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
-import io.github.qishr.cascara.common.util.AstUtil;
+import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
+import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.lang.schema.CompiledSchema;
 import io.github.qishr.cascara.lang.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.lang.schema.api.SchemaParser;
@@ -155,13 +156,31 @@ public class CascaraSchemaResolver implements SchemaResolver {
     }
 
     @Override
-    public AstNode resolveFragment(String fragment, AstNode root) throws SchemaException {
-        return SchemaUtils.resolveFragment(root, fragment);
+    public AstNode resolveFragment(String path, AstNode root) throws SchemaException {
+        AstNode node = SchemaUtils.resolveFragment(root, path);
+
+        // Infer the fragment's name from its path
+        String name = extractName(path);
+        if (name != null && node instanceof SimpleMapNode map) {
+            map.put("name", new SimpleScalarNode(name));
+        }
+
+        return node;
     }
 
     //
     //
     //
+
+    private String extractName(String path) {
+        String name = null;
+        String[] segments = path.split("/");
+        for (String segment : segments) {
+            if (segment.isEmpty()) continue;
+            name = segment;
+        }
+        return name;
+    }
 
     private CompiledSchema generateSchemaForClass(Class<?> clazz) throws SchemaException {
         URI originUri = getSchemaUriForClass(clazz);

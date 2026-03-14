@@ -7,8 +7,6 @@ import java.util.Set;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.lang.schema.ast.SchemaNode;
 import io.github.qishr.cascara.lang.schema.ast.SchemaType;
 import io.github.qishr.cascara.lang.schema.rule.RequiredRule;
@@ -25,7 +23,6 @@ public class SchemaUtils {
 
         // Split by '/', then filter out empty segments (like the leading one in /definitions)
         String[] parts = path.split("/");
-        String currentName = "";
         AstNode currentNode = root;
         if (currentNode instanceof StructuredDocument doc) {
             currentNode = doc.getRoot();
@@ -37,15 +34,11 @@ public class SchemaUtils {
             if (currentNode instanceof MapAstNode map) {
                 // Using the key exactly as it appears in the segment (e.g., "$defs")
                 currentNode = (AstNode) map.get(part);
-                currentName = part;
             } else {
                 return null;
             }
 
             if (currentNode == null) return null;
-        }
-        if (currentNode instanceof SimpleMapNode map) {
-            map.put("name", new SimpleScalarNode(currentName));
         }
         return currentNode;
     }

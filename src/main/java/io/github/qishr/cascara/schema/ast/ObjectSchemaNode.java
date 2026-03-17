@@ -10,6 +10,8 @@ import io.github.qishr.cascara.schema.util.ValidationResult;
 
 public class ObjectSchemaNode extends BaseSchemaNode {
     private final Map<String, SchemaNode> properties = new LinkedHashMap<>();
+    private boolean additionalPropertiesAllowed = true;
+    private boolean unevaluatedPropertiesAllowed = true;
 
     public ObjectSchemaNode(String name) {
         super(name, SchemaType.OBJECT);
@@ -52,4 +54,10 @@ public class ObjectSchemaNode extends BaseSchemaNode {
         // BaseSchemaNode now handles the recursive allOf search
         return super.getPropertySchema(key);
     }
+
+
+    public void setUnevaluatedPropertiesAllowed(boolean allowed) { this.unevaluatedPropertiesAllowed = allowed; }
+    public boolean areUnevaluatedPropertiesAllowed() { return unevaluatedPropertiesAllowed; }
+    public void setAdditionalPropertiesAllowed(boolean b) { additionalPropertiesAllowed = b; }
+    public boolean areAdditionalPropertiesAllowed() { return additionalPropertiesAllowed; }
 }

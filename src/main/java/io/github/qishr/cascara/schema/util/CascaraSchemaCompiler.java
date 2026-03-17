@@ -31,6 +31,10 @@ import io.github.qishr.cascara.schema.util.CascaraSchemaCompiler;
 public class CascaraSchemaCompiler implements SchemaCompiler {
     private static final String REF = "$ref";
     private static final String ABSOLUTE = "absolute";
+    private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
+    private static final String ALL_OF = "allOf";
+    private static final String ANY_OF = "anyOf";
+    private static final String UNEVALUATED_PROPERTIES = "unevaluatedProperties";
     private static final String DEFAULT = "default";
     private static final String DEFINITIONS = "definitions";
     private static final String DEFINITIONS_INTERNAL = "#/definitions/";
@@ -46,6 +50,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     private static final String MAXIMUM = "maximum";
     private static final String MAXITEMS = "maxItems";
     private static final String NAME = "name";
+    private static final String ONE_OF = "oneOf";
     private static final String PROPERTIES = "properties";
     private static final String READONLY = "readOnly";
     private static final String REQUIRED = "required";
@@ -164,13 +169,12 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
 
         // Capture ALL extension keywords (x-load, x-storage, x-cascade, etc.)
         astNode.getEntries().forEach(entry -> {
-            // TODO: Ensure x-hidden is being handled correctly
             if (entry instanceof MapEntryAstNode node && node.getKey() instanceof ScalarAstNode keyNode) {
                 String key = keyNode.getString();
-                if (key.startsWith("x-")) {
-                    if (node.getValue() instanceof ScalarAstNode scalarValue) {
-                        schemaNode.setCustomHint(key, scalarValue.getString());
-                    }
+                if (key.startsWith("x-") && node.getValue() instanceof ScalarAstNode valNode) {
+                    // This captures the actual primitive (Boolean, Integer, Double, String)
+                    Object value = valNode.getPrimitiveValue();
+                    schemaNode.setCustomHint(key, value);
                 }
             }
         });
@@ -178,11 +182,10 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         SchemaNode effectiveRoot = (rootSchema == null) ? schemaNode : rootSchema;
 
         // ... Compositions, Definitions, and Properties logic remains the same ...
-        // Note: use getCustomHint("x-load") in the migration service later!
 
-        processComposition(astNode, "allOf", schemaNode, originUri, effectiveRoot);
-        processComposition(astNode, "anyOf", schemaNode, originUri, effectiveRoot);
-        processComposition(astNode, "oneOf", schemaNode, originUri, effectiveRoot);
+        processComposition(astNode, ALL_OF, schemaNode, originUri, effectiveRoot);
+        processComposition(astNode, ANY_OF, schemaNode, originUri, effectiveRoot);
+        processComposition(astNode, ONE_OF, schemaNode, originUri, effectiveRoot);
 
         // Handle Internal Definitions
         if (astNode.get(DEFINITIONS) instanceof MapAstNode defs) {
@@ -200,16 +203,32 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         }
 
         // 2. Structural Logic
-        if (schemaNode instanceof ObjectSchemaNode objNode &&
-                astNode.get(PROPERTIES) instanceof MapAstNode props) {
-            props.getEntries().forEach((entry) -> {
-                if (entry instanceof MapEntryAstNode entryNode &&
-                        entryNode.getKey() instanceof ScalarAstNode scalar &&
-                        entryNode.getValue() instanceof MapAstNode m) {
-                    String propName = scalar.getString();
-                    objNode.addProperty(propName, processNode(m, propName, originUri, effectiveRoot));
-                }
-            });
+
+        if (schemaNode instanceof ObjectSchemaNode objNode) {
+            // Handle additionalProperties
+            AstNode addProps = astNode.get(ADDITIONAL_PROPERTIES);
+            if (addProps instanceof ScalarAstNode scalar && scalar.getPrimitiveValue() instanceof Boolean b) {
+                objNode.setAdditionalPropertiesAllowed(b);
+            }
+
+            // Handle unevaluatedProperties
+            AstNode unevProps = astNode.get(UNEVALUATED_PROPERTIES);
+            if (unevProps instanceof ScalarAstNode scalar && scalar.getPrimitiveValue() instanceof Boolean b) {
+                objNode.setUnevaluatedPropertiesAllowed(b);
+            }
+
+            // TODO: Handle the case where additionalProperties is a sub-schema
+
+            if (astNode.get(PROPERTIES) instanceof MapAstNode props) {
+                props.getEntries().forEach((entry) -> {
+                    if (entry instanceof MapEntryAstNode entryNode &&
+                            entryNode.getKey() instanceof ScalarAstNode scalar &&
+                            entryNode.getValue() instanceof MapAstNode m) {
+                        String propName = scalar.getString();
+                        objNode.addProperty(propName, processNode(m, propName, originUri, effectiveRoot));
+                    }
+                });
+            }
         }
         else if (schemaNode instanceof ArraySchemaNode arrNode) {
             AstNode itemsAst = astNode.get(ITEMS);
@@ -228,10 +247,34 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             seq.getElements().forEach(element -> {
                 if (element instanceof MapAstNode m) {
                     SchemaNode subSchema = processNode(m, key + "-item", uri, root);
-                    if (key.equals("allOf")) parent.addAllOf(subSchema);
-                    // else if ... anyOf/oneOf
+
+                    if (key.equals(ALL_OF)) {
+                        parent.addAllOf(subSchema);
+                        // If we are building an object, pull in the inherited properties
+                        if (parent instanceof ObjectSchemaNode targetObj) {
+                            flattenInheritedProperties(targetObj, subSchema);
+                        }
+                    }
+                    // oneOf/anyOf can be stored for validation, but allOf is our "extends"
                 }
             });
+        }
+    }
+
+    private void flattenInheritedProperties(ObjectSchemaNode target, SchemaNode source) {
+        // We resolve the lazy node to get the actual properties
+        SchemaNode actualSource = (source instanceof LazySchemaNode lazy) ? lazy.getResolved() : source;
+
+        if (actualSource instanceof ObjectSchemaNode sourceObj) {
+            sourceObj.getProperties().forEach((propName, propNode) -> {
+                // Only add if the child hasn't overridden it locally
+                if (!target.getProperties().containsKey(propName)) {
+                    target.addProperty(propName, propNode);
+                }
+            });
+
+            // Follow the chain up (Grandparents)
+            actualSource.getAllOf().forEach(grandParent -> flattenInheritedProperties(target, grandParent));
         }
     }
 

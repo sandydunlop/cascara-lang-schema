@@ -6,9 +6,6 @@ plugins {
 }
 
 
-group = 'io.github.qishr'
-
-
 repositories {
     mavenLocal()
     mavenCentral()

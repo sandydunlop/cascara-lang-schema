@@ -89,7 +89,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
     @Override
     public SchemaNode resolve(String ref, SchemaNode relativeTo) throws SchemaException {
         try {
-            URI baseUri = relativeTo.getUri();
+            URI baseUri = relativeTo.getOriginUri();
             URI targetUri = baseUri.resolve(ref);
 
             SchemaCompiler compiler = new CascaraSchemaCompiler(this);

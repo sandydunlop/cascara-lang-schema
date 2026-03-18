@@ -20,7 +20,7 @@ public interface SchemaNode extends AstNode {
     String getDescription();
 
     // Structural Access
-    Optional<SchemaNode> getProperty(String key);
+    SchemaNode getProperty(String key);
     Map<String, SchemaNode> getProperties();
 
     // For ARRAY types
@@ -29,9 +29,9 @@ public interface SchemaNode extends AstNode {
     // Definitions & Refs
     boolean isRef();
     String getRef();
-    Optional<SchemaNode> getDefinition(String name);
+    SchemaNode getDefinition(String name);
     Map<String, SchemaNode> getDefinitions();
-    URI getUri();
+    URI getOriginUri();
 
     // Data Defaults & Validation
     Object getDefaultValue();

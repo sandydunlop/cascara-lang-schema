@@ -94,16 +94,16 @@ public final class CompiledSchema implements StructuredDocument {
     @Override public int getEndLine() {return 0; }
     @Override public int getEndColumn() {return 0; }
 
-    @Override public URI getUri() {
-        return root == null ? null : root.getUri();
+    @Override public URI getOriginUri() {
+        return root == null ? null : root.getOriginUri();
     }
 
     public URI getId() {
-        return root == null ? null : root.getUri();
+        return root == null ? null : root.getOriginUri();
     }
 
     public void setId(URI id) {
-        if (root == null) throw new IllegalStateException("CompiledSchema has no root");
+        if (root == null) throw new SchemaException("CompiledSchema has no root", "");
         root.setOriginUri(id);
     }
 
@@ -118,7 +118,7 @@ public final class CompiledSchema implements StructuredDocument {
     }
 
     @Override
-    public Optional<URI> getSchemaUri() {
-        return Optional.of(URI.create("https://json-schema.org/draft/2020-12/schema"));
+    public URI getSchemaUri() {
+        return URI.create("https://json-schema.org/draft/2020-12/schema");
     }
 }

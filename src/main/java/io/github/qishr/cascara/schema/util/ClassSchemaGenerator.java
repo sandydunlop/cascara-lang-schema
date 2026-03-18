@@ -213,21 +213,28 @@ public final class ClassSchemaGenerator {
 
         Class<?> type = field.getType();
 
-        if (isList(field)) {
+        applyTypeAnalysis(field, node);
+        String analyzedType = node.getString("type");
+
+        if (isScalarType(type) || (analyzedType != null &&
+            !ARRAY.equals(analyzedType) && !OBJECT.equals(analyzedType))
+        ) {
+            fillTypeInfo(node, type, field);
+        }
+        else if (isList(field)) {
             Class<?> elementType = getListElementType(field);
             node.put("type", scalar(ARRAY));
             node.put("items", createItemsNode(elementType, field));
-        } else if (isScalarType(type)) {
-            fillTypeInfo(node, type, field);
-        } else if (isExternalEntityType(type)) {
+        }
+        else if (isExternalEntityType(type)) {
             // External entity → external $ref
             applyExternalRef(node, type, field);
-        } else {
+        }
+        else {
             // Embedded/value object → internal definition + $ref
             applyInternalRef(node, type);
         }
 
-        applyTypeAnalysis(field, node);
         applyConstraints(node, field);
         return node;
     }
@@ -243,34 +250,18 @@ public final class ClassSchemaGenerator {
             applyInternalRef(items, elementType);
         }
 
-        // TODO: Does this actually need done here, or is createFieldNode where it needs done?
-        // applyTypeAnalysis(field, items);
-
         return items;
     }
 
     private void applyTypeAnalysis(Field field, SimpleMapNode targetAst) {
         for (TypeAnalyzer ta : typeAnalyzers) {
             ta.analyze(field, targetAst);
+            ta.analyze(field.getType(), targetAst);
         }
     }
 
     private void applyExternalRef(SimpleMapNode node, Class<?> target, Field field) {
         node.put("$ref", scalar(SCHEMA_SERVICE_URI + target.getName()));
-
-        // TODO: Ensure these settings work in schema migration service
-
-        // Load load = field.getAnnotation(Load.class);
-        // String strategy = (load != null && load.value() == Load.Strategy.LAZY)
-        //     ? "lazy"
-        //     : "eager";
-        // node.put("x-load", scalar(strategy));
-
-        // Cascade cascade = field.getAnnotation(Cascade.class);
-        // node.put("x-cascade", scalar(cascade != null ? cascade.value().name() : "PERSIST"));
-
-        // boolean isList = List.class.isAssignableFrom(field.getType());
-        // node.put("x-storage", scalar(isList ? "link-table" : "foreign-key"));
     }
 
     private void applyInternalRef(SimpleMapNode node, Class<?> target) {

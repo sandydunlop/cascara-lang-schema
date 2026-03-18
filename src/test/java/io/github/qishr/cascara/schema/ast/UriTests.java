@@ -27,7 +27,7 @@ public class UriTests {
 
         CompiledSchema schema = compiler.compile(doc);
 
-        URI schemaUri = schema.getUri();
+        URI schemaUri = schema.getOriginUri();
         assertEquals(uri, schemaUri);
     }
 }

@@ -43,12 +43,18 @@ public final class CascaraSchemaDecompiler {
     private static final String TYPE = "type";
 
     public SimpleMapNode decompile(CompiledSchema compiled) {
-        if (compiled == null) return null;
+        if (compiled == null || compiled.getRoot() == null) return null;
 
         SimpleMapNode root = new SimpleMapNode();
         root.put(SCHEMA, scalarValue(META_SCHEMA));
-        root.put(ID, scalarValue(compiled.getUri()));
-        SimpleMapNode decompiled = decompileInternal(compiled.getRoot());
+        root.put(ID, scalarValue(compiled.getOriginUri()));
+
+        ObjectSchemaNode compiledRoot = compiled.getRoot();
+        if (compiledRoot.getName() != null && !compiledRoot.getName().isEmpty()) {
+            root.put("name", scalarValue(compiledRoot.getName()));
+        }
+
+        SimpleMapNode decompiled = decompileInternal(compiledRoot);
         for (SimpleMapEntryNode entry : decompiled.getEntries()) {
             root.put(entry.getKey(), entry.getValue());
         }
@@ -101,6 +107,10 @@ public final class CascaraSchemaDecompiler {
         SimpleMapNode map = new SimpleMapNode();
         map.put(TYPE, scalarValue(OBJECT));
 
+        // if (object.getName() != null && !object.getName().isEmpty()) {
+        //     map.put("name", scalarValue(object.getName()));
+        // }
+
         // definitions
         if (!object.getDefinitions().isEmpty()) {
             SimpleMapNode definitions = new SimpleMapNode();
@@ -117,6 +127,13 @@ public final class CascaraSchemaDecompiler {
                 properties.put(e.getKey(), decompileInternal(e.getValue()));
             }
             map.put(PROPERTIES, properties);
+        }
+
+        if (!object.areAdditionalPropertiesAllowed()) {
+            map.put("additionalProperties", new SimpleScalarNode(false));
+        }
+        if (!object.areUnevaluatedPropertiesAllowed()) {
+            map.put("unevaluatedProperties", new SimpleScalarNode(false));
         }
 
         return map;
@@ -157,11 +174,8 @@ public final class CascaraSchemaDecompiler {
         return scalar;
     }
 
-    private Map<String,String> standardKeywords(SchemaNode compiled) {
-        // TODO:
-        //  - format
-
-        Map<String,String> map = new HashMap<>();
+    private Map<String, Object> standardKeywords(SchemaNode compiled) {
+        Map<String, Object> map = new HashMap<>();
 
         if (compiled.getTitle() != null && !compiled.getTitle().isEmpty()) {
             map.put(TITLE, compiled.getTitle());
@@ -169,10 +183,11 @@ public final class CascaraSchemaDecompiler {
         if (compiled.getDescription() != null && !compiled.getDescription().isEmpty()) {
             map.put(DESCRIPTION, compiled.getDescription());
         }
-
-        if (compiled.isReadOnly()) { map.put(READONLY, TRUE); }
+        if (compiled.isReadOnly()) {
+            map.put(READONLY, true);
+        }
         if (compiled.getDefaultValue() != null) {
-            map.put(DEFAULT, String.valueOf(compiled.getDefaultValue()));
+            map.put(DEFAULT, compiled.getDefaultValue());
         }
         return map;
     }

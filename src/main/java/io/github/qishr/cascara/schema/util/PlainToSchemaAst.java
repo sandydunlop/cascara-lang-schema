@@ -12,19 +12,13 @@ public final class PlainToSchemaAst {
 
     public SimpleNode toAst(Object plain) {
         if (plain == null) {
-            return new SimpleScalarNode("null");
+            // Representing a literal null is better than the string "null"
+            return new SimpleScalarNode(null);
         }
 
-        if (plain instanceof String s) {
-            return new SimpleScalarNode(s);
-        }
-
-        if (plain instanceof Number n) {
-            return new SimpleScalarNode(n.toString());
-        }
-
-        if (plain instanceof Boolean b) {
-            return new SimpleScalarNode(b.toString());
+        // Pass numbers and booleans directly as Objects
+        if (plain instanceof String || plain instanceof Number || plain instanceof Boolean) {
+            return new SimpleScalarNode(plain);
         }
 
         if (plain instanceof Map<?, ?> map) {

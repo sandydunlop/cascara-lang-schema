@@ -2,7 +2,9 @@ package io.github.qishr.cascara.schema.util;
 
 
 import java.net.URI;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.github.qishr.cascara.common.lang.*;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
@@ -72,7 +74,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     @Override
     public CompiledSchema compile(StructuredDocument doc) {
         // TODO: This is horrible - get rid of this Optional and just return the URI from getSchemaUri
-        return compile(doc, doc.getSchemaUri().orElse(null));
+        return compile(doc, doc.getSchemaUri());
     }
 
     @Override
@@ -104,9 +106,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         }
 
         SchemaNode schemaRoot = processNode(map, name, originUri, null);
-        if (schemaRoot.getUri() == null) {
-            System.out.println();
-        }
 
         CompiledSchema compiled = new CompiledSchema(name, (ObjectSchemaNode) schemaRoot);
         resolver.registerSchema(originUri, compiled);
@@ -168,13 +167,22 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         schemaNode.setDescription(astNode.getString(DESCRIPTION));
 
         // Capture ALL extension keywords (x-load, x-storage, x-cascade, etc.)
-        astNode.getEntries().forEach(entry -> {
-            if (entry instanceof MapEntryAstNode node && node.getKey() instanceof ScalarAstNode keyNode) {
-                String key = keyNode.getString();
-                if (key.startsWith("x-") && node.getValue() instanceof ScalarAstNode valNode) {
-                    // This captures the actual primitive (Boolean, Integer, Double, String)
-                    Object value = valNode.getPrimitiveValue();
-                    schemaNode.setCustomHint(key, value);
+        astNode.getEntries().forEach((entry) -> {
+            if (entry instanceof MapEntryAstNode node) {
+                AstNode keyBase = node.getKey();
+                if (keyBase instanceof ScalarAstNode keyNode) {
+                    String key = keyNode.getString();
+                    if (key.startsWith("x-")) {
+                        AstNode valBase = node.getValue();
+
+                        if (valBase instanceof ScalarAstNode valNode) {
+                            // Handle simple hints (x-tracked: true)
+                            schemaNode.setCustomHint(key, valNode.getPrimitiveValue());
+                        } else if (valBase instanceof MapAstNode mapNode) {
+                            // Handle complex hints (x-indexed: { name: "...", unique: true })
+                            schemaNode.setCustomHint(key, convertToMap(mapNode));
+                        }
+                    }
                 }
             }
         });
@@ -259,6 +267,23 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                 }
             });
         }
+    }
+
+    /// Helper to convert AST maps to standard Java maps for the SchemaNode
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> convertToMap(MapAstNode mapNode) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        mapNode.getEntries().forEach(entry -> {
+            if (entry instanceof MapEntryAstNode node && node.getKey() instanceof ScalarAstNode kn) {
+                AstNode vn = node.getValue();
+                if (vn instanceof ScalarAstNode scalar) {
+                    result.put(kn.getString(), scalar.getPrimitiveValue());
+                } else if (vn instanceof MapAstNode nestedMap) {
+                    result.put(kn.getString(), convertToMap(nestedMap));
+                }
+            }
+        });
+        return result;
     }
 
     private void flattenInheritedProperties(ObjectSchemaNode target, SchemaNode source) {

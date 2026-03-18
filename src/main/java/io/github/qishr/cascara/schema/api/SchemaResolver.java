@@ -10,7 +10,7 @@ import io.github.qishr.cascara.schema.util.SchemaException;
 
 public interface SchemaResolver {
 
-    AstNode resolve(String ref, SchemaNode relativeTo) throws SchemaException;
+    SchemaNode resolve(String ref, SchemaNode relativeTo) throws SchemaException;
     AstNode resolveFragment(String fragment, AstNode root) throws SchemaException;
 
     CompiledSchema getSchemaForClass(Class<?> clazz) throws SchemaException;

@@ -12,14 +12,14 @@ import io.github.qishr.cascara.schema.ast.SchemaNode;
 import io.github.qishr.cascara.schema.util.SchemaException;
 
 public class TestResolver implements SchemaResolver {
-    private final Map<String, AstNode> docs = new HashMap<>();
+    private final Map<String, SchemaNode> docs = new HashMap<>();
 
-    public void register(URI uri, AstNode doc) {
+    public void register(URI uri, SchemaNode doc) {
         docs.put(uri.toString(), doc);
     }
 
     @Override
-    public AstNode resolve(String ref, SchemaNode relativeTo) {
+    public SchemaNode resolve(String ref, SchemaNode relativeTo) {
         return docs.get(ref);
     }
 

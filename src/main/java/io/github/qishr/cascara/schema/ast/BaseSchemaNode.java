@@ -114,13 +114,13 @@ public abstract class BaseSchemaNode implements SchemaNode {
     @Override public String getRef() { return ref; }
 
     @Override
-    public Optional<SchemaNode> getProperty(String name) {
-        return Optional.ofNullable(getProperties().get(name));
+    public SchemaNode getProperty(String name) {
+        return getProperties().get(name);
     }
 
     @Override
-    public Optional<SchemaNode> getDefinition(String name) {
-        return Optional.ofNullable(getDefinitions().get(name));
+    public SchemaNode getDefinition(String name) {
+        return getDefinitions().get(name);
     }
 
     @Override
@@ -131,7 +131,7 @@ public abstract class BaseSchemaNode implements SchemaNode {
     }
 
     @Override
-    public URI getUri() {
+    public URI getOriginUri() {
         return originUri;
     }
 

@@ -11,7 +11,7 @@ import io.github.qishr.cascara.schema.ast.SchemaNode;
 
 public class NoopResolver implements SchemaResolver {
     @Override
-    public AstNode resolve(String ref, SchemaNode relativeTo) {
+    public SchemaNode resolve(String ref, SchemaNode relativeTo) {
         return null; // no external schemas in tests
     }
 

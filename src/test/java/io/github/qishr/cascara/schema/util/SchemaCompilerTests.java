@@ -2,6 +2,7 @@ package io.github.qishr.cascara.schema.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -67,8 +68,7 @@ public class SchemaCompilerTests {
 
         // Fix: Use .get() or .orElseThrow() for Optionals
         ObjectSchemaNode childNode = (ObjectSchemaNode) compiled.getRoot()
-                .getDefinition("child")
-                .orElseThrow();
+                .getDefinition("child");
 
         assertFalse(childNode.areUnevaluatedPropertiesAllowed());
 
@@ -109,10 +109,8 @@ public class SchemaCompilerTests {
 
         CompiledSchema compiled = compiler.compile(new SimpleDocument(root));
 
-        // Fix: Handle Optional
         ObjectSchemaNode childNode = (ObjectSchemaNode) compiled.getRoot()
-                .getDefinition("child")
-                .orElseThrow();
+                .getDefinition("child");
 
         assertTrue(childNode.getProperties().containsKey("base_field"));
         Object hint = childNode.getProperties().get("base_field").getCustomHint("x-tracked");

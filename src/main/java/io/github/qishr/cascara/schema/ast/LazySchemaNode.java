@@ -10,7 +10,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 
 public class LazySchemaNode extends BaseSchemaNode {
@@ -144,14 +143,14 @@ public class LazySchemaNode extends BaseSchemaNode {
     }
 
     @Override
-    public Object getCustomHint(String key) {
+    public Object getExtension(String key) {
         // 1. Check the reference site first (local hints)
-        Object local = super.getCustomHint(key);
+        Object local = super.getExtension(key);
         if (local != null) return local;
 
         // 2. Fallback to the resolved target's hints
         SchemaNode resolved = getResolved();
-        return (resolved != null) ? resolved.getCustomHint(key) : null;
+        return (resolved != null) ? resolved.getExtension(key) : null;
     }
 
     //
@@ -159,14 +158,14 @@ public class LazySchemaNode extends BaseSchemaNode {
     //
 
     @Override
-    public Map<String, Object> getCustomHints() {
+    public Map<String, Object> getExtensions() {
         // Merge local hints with target hints for a complete picture
-        Map<String, Object> combined = new HashMap<>(super.getCustomHints());
+        Map<String, Object> combined = new HashMap<>(super.getExtensions());
         try {
             SchemaNode target = getResolved();
             if (target != null) {
                 // Local hints override target hints in case of conflict
-                target.getCustomHints().forEach(combined::putIfAbsent);
+                target.getExtensions().forEach(combined::putIfAbsent);
             }
         } catch (Exception ignored) {}
         return combined;

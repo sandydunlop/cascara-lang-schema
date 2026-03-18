@@ -6,13 +6,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.github.qishr.cascara.common.lang.*;
+import io.github.qishr.cascara.common.diagnostic.Reporter;
+import io.github.qishr.cascara.common.diagnostic.SimpleReporter;
+import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.MapEntryAstNode;
 import io.github.qishr.cascara.common.lang.ast.ScalarAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
@@ -31,36 +34,18 @@ import io.github.qishr.cascara.schema.rule.RequiredRule;
 import io.github.qishr.cascara.schema.util.CascaraSchemaCompiler;
 
 public class CascaraSchemaCompiler implements SchemaCompiler {
-    private static final String REF = "$ref";
+    // TODO: These should be in a TypeAnalyzer
     private static final String ABSOLUTE = "absolute";
-    private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
-    private static final String ALL_OF = "allOf";
-    private static final String ANY_OF = "anyOf";
-    private static final String UNEVALUATED_PROPERTIES = "unevaluatedProperties";
-    private static final String DEFAULT = "default";
-    private static final String DEFINITIONS = "definitions";
-    private static final String DEFINITIONS_INTERNAL = "#/definitions/";
-    private static final String DESCRIPTION = "description";
-    private static final String ENUM = "enum";
     private static final String EXTENSIONS = "extensions";
-    private static final String FORMAT = "format";
+    private static final String NAME = "name";
+
+    // Default names for things
+    private static final String ROOT = "root";
     private static final String FRAGMENT = "fragment";
     private static final String ITEM = "item";
-    private static final String ITEMS = "items";
-    private static final String MINIMUM = "minimum";
-    private static final String MINITEMS = "minItems";
-    private static final String MAXIMUM = "maximum";
-    private static final String MAXITEMS = "maxItems";
-    private static final String NAME = "name";
-    private static final String ONE_OF = "oneOf";
-    private static final String PROPERTIES = "properties";
-    private static final String READONLY = "readOnly";
-    private static final String REQUIRED = "required";
-    private static final String ROOT = "root";
-    private static final String TITLE = "title";
-    private static final String TYPE = "type";
 
     private final SchemaResolver resolver;
+    private Reporter reporter = new SimpleReporter();
 
     @Deprecated
     public CascaraSchemaCompiler(SchemaResolver resolver, boolean resolveRefs) {
@@ -71,23 +56,39 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         this.resolver = resolver;
     }
 
+    public CascaraSchemaCompiler setReporter(Reporter reporter) {
+        if (reporter == null) {
+            this.reporter.error("Reporter must not be null");
+        } else {
+            this.reporter = reporter;
+        }
+        return this;
+    }
+
     @Override
     public CompiledSchema compile(StructuredDocument doc) {
-        // TODO: This is horrible - get rid of this Optional and just return the URI from getSchemaUri
-        return compile(doc, doc.getSchemaUri());
+        return compile(doc, doc.getOriginUri());
     }
 
     @Override
     public CompiledSchema compile(StructuredDocument doc, URI originUri) {
+        if (doc == null) {
+            reporter.error("Document must not be null");
+            return null;
+        }
         AstNode root = doc.getRoot();
 
         if (!(root instanceof MapAstNode map)) {
+            reporter.error("Document root must be an AstMapNode");
             return null;
         }
 
         if (originUri == null) {
             AstNode idNode = map.get("$id");
-            if (!(idNode instanceof ScalarAstNode scalarId)) return null;
+            if (!(idNode instanceof ScalarAstNode scalarId)) {
+                reporter.error("Document must contain $id or origin URI must be given to compiler");
+                return null;
+            }
             originUri = URI.create(scalarId.getString());
         }
 
@@ -113,7 +114,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     }
 
     @Override
-    public SchemaNode compileSubSchema(MapAstNode node, URI originUri) {
+    public SchemaNode compileSubSchema(@SuppressWarnings("rawtypes") MapAstNode node, URI originUri) {
         SchemaNode rootContext = null;
 
         // Check if we can safely ask the resolver without recursing.
@@ -141,9 +142,9 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         return processNode(node, name, originUri, rootContext);
     }
 
-    @SuppressWarnings({ "unchecked" })
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private SchemaNode processNode(MapAstNode astNode, String name, URI originUri, SchemaNode rootSchema) {
-        String refValue = astNode.getString(REF);
+        String refValue = astNode.getString(SchemaKeyword.REF.string());
         BaseSchemaNode schemaNode;
 
         if (refValue != null && !refValue.isEmpty()) {
@@ -155,7 +156,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             schemaNode = switch (type) {
                 case OBJECT -> new ObjectSchemaNode(name);
                 case ARRAY  -> new ArraySchemaNode(name);
-                // REF type is deleted from the enum; $ref is structural, not a type.
                 default     -> new ScalarSchemaNode(name, type);
             };
         }
@@ -163,40 +163,17 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         // --- Uniform Metadata & Extensions ---
         schemaNode.setOriginAst(astNode);
         schemaNode.setOriginUri(originUri);
-        schemaNode.setTitle(astNode.getString(TITLE));
-        schemaNode.setDescription(astNode.getString(DESCRIPTION));
+        schemaNode.setTitle(astNode.getString(SchemaKeyword.TITLE.string()));
+        schemaNode.setDescription(astNode.getString(SchemaKeyword.DESCRIPTION.string()));
 
-        // Capture ALL extension keywords (x-load, x-storage, x-cascade, etc.)
-        astNode.getEntries().forEach((entry) -> {
-            if (entry instanceof MapEntryAstNode node) {
-                AstNode keyBase = node.getKey();
-                if (keyBase instanceof ScalarAstNode keyNode) {
-                    String key = keyNode.getString();
-                    if (key.startsWith("x-")) {
-                        AstNode valBase = node.getValue();
-
-                        if (valBase instanceof ScalarAstNode valNode) {
-                            // Handle simple hints (x-tracked: true)
-                            schemaNode.setCustomHint(key, valNode.getPrimitiveValue());
-                        } else if (valBase instanceof MapAstNode mapNode) {
-                            // Handle complex hints (x-indexed: { name: "...", unique: true })
-                            schemaNode.setCustomHint(key, convertToMap(mapNode));
-                        }
-                    }
-                }
-            }
-        });
-
+        // Handle Compositions
         SchemaNode effectiveRoot = (rootSchema == null) ? schemaNode : rootSchema;
-
-        // ... Compositions, Definitions, and Properties logic remains the same ...
-
-        processComposition(astNode, ALL_OF, schemaNode, originUri, effectiveRoot);
-        processComposition(astNode, ANY_OF, schemaNode, originUri, effectiveRoot);
-        processComposition(astNode, ONE_OF, schemaNode, originUri, effectiveRoot);
+        processComposition(astNode, SchemaKeyword.ALL_OF, schemaNode, originUri, effectiveRoot);
+        processComposition(astNode, SchemaKeyword.ANY_OF, schemaNode, originUri, effectiveRoot);
+        processComposition(astNode, SchemaKeyword.ONE_OF, schemaNode, originUri, effectiveRoot);
 
         // Handle Internal Definitions
-        if (astNode.get(DEFINITIONS) instanceof MapAstNode defs) {
+        if (astNode.get(SchemaKeyword.DEFINITIONS.string()) instanceof MapAstNode defs) {
             defs.getEntries().forEach((entry) -> {
                 if (entry instanceof MapEntryAstNode entryNode &&
                         entryNode.getValue() instanceof MapAstNode m &&
@@ -210,24 +187,24 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             });
         }
 
-        // 2. Structural Logic
+        // Structural Logic
 
         if (schemaNode instanceof ObjectSchemaNode objNode) {
             // Handle additionalProperties
-            AstNode addProps = astNode.get(ADDITIONAL_PROPERTIES);
+            AstNode addProps = astNode.get(SchemaKeyword.ADDITIONAL_PROPERTIES.string());
             if (addProps instanceof ScalarAstNode scalar && scalar.getPrimitiveValue() instanceof Boolean b) {
                 objNode.setAdditionalPropertiesAllowed(b);
             }
 
             // Handle unevaluatedProperties
-            AstNode unevProps = astNode.get(UNEVALUATED_PROPERTIES);
+            AstNode unevProps = astNode.get(SchemaKeyword.UNEVALUATED_PROPERTIES.string());
             if (unevProps instanceof ScalarAstNode scalar && scalar.getPrimitiveValue() instanceof Boolean b) {
                 objNode.setUnevaluatedPropertiesAllowed(b);
             }
 
             // TODO: Handle the case where additionalProperties is a sub-schema
 
-            if (astNode.get(PROPERTIES) instanceof MapAstNode props) {
+            if (astNode.get(SchemaKeyword.PROPERTIES.string()) instanceof MapAstNode props) {
                 props.getEntries().forEach((entry) -> {
                     if (entry instanceof MapEntryAstNode entryNode &&
                             entryNode.getKey() instanceof ScalarAstNode scalar &&
@@ -239,24 +216,46 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             }
         }
         else if (schemaNode instanceof ArraySchemaNode arrNode) {
-            AstNode itemsAst = astNode.get(ITEMS);
+            AstNode itemsAst = astNode.get(SchemaKeyword.ITEMS.string());
             if (itemsAst instanceof MapAstNode itemsMap) {
                 arrNode.setItemTemplate(processNode(itemsMap, ITEM, originUri, effectiveRoot));
             }
         }
 
         attachRules(astNode, schemaNode);
+
+        // Capture ALL extension keywords (x-load, x-storage, x-cascade, etc.)
+        astNode.getEntries().forEach((entry) -> {
+            if (entry instanceof MapEntryAstNode node) {
+                AstNode keyBase = node.getKey();
+                if (keyBase instanceof ScalarAstNode keyNode) {
+                    String key = keyNode.getString();
+                    if (!SchemaKeyword.exists(key)) { // it's not a standard JSONSchema keyword
+                        AstNode valBase = node.getValue();
+
+                        if (valBase instanceof ScalarAstNode valNode) {
+                            // Handle simple hints (x-tracked: true)
+                            schemaNode.setExtension(key, valNode.getPrimitiveValue());
+                        } else if (valBase instanceof MapAstNode mapNode) {
+                            // Handle complex hints (x-indexed: { name: "...", unique: true })
+                            schemaNode.setExtension(key, convertToMap(mapNode));
+                        }
+                    }
+                }
+            }
+        });
+
         return schemaNode;
     }
 
     @SuppressWarnings("unchecked")
-    private void processComposition(MapAstNode astNode, String key, BaseSchemaNode parent, URI uri, SchemaNode root) {
-        if (astNode.get(key) instanceof SequenceAstNode seq) {
+    private void processComposition(@SuppressWarnings("rawtypes") MapAstNode astNode, SchemaKeyword key, BaseSchemaNode parent, URI uri, SchemaNode root) {
+        if (astNode.get(key.string()) instanceof SequenceAstNode seq) {
             seq.getElements().forEach(element -> {
                 if (element instanceof MapAstNode m) {
                     SchemaNode subSchema = processNode(m, key + "-item", uri, root);
 
-                    if (key.equals(ALL_OF)) {
+                    if (key == SchemaKeyword.ALL_OF) {
                         parent.addAllOf(subSchema);
                         // If we are building an object, pull in the inherited properties
                         if (parent instanceof ObjectSchemaNode targetObj) {
@@ -271,7 +270,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
 
     /// Helper to convert AST maps to standard Java maps for the SchemaNode
     @SuppressWarnings("unchecked")
-    private Map<String, Object> convertToMap(MapAstNode mapNode) {
+    private Map<String, Object> convertToMap(@SuppressWarnings("rawtypes") MapAstNode mapNode) {
         Map<String, Object> result = new LinkedHashMap<>();
         mapNode.getEntries().forEach(entry -> {
             if (entry instanceof MapEntryAstNode node && node.getKey() instanceof ScalarAstNode kn) {
@@ -304,22 +303,26 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     }
 
     @SuppressWarnings("unchecked")
-    private void attachRules(MapAstNode astNode, BaseSchemaNode schemaNode) {
+    private void attachRules(@SuppressWarnings("rawtypes") MapAstNode astNode, BaseSchemaNode schemaNode) {
 
-        AstNode defaultVal = astNode.get(DEFAULT);
+        AstNode defaultVal = astNode.get(SchemaKeyword.DEFAULT.string());
         if (defaultVal instanceof ScalarAstNode scalar) {
             schemaNode.setDefaultValue(scalar.getPrimitiveValue());
         }
 
-        if (astNode.get(READONLY) instanceof ScalarAstNode scalar &&
+        if (astNode.get(SchemaKeyword.READONLY.string()) instanceof ScalarAstNode scalar &&
             scalar.getPrimitiveValue() instanceof Boolean b) {
             schemaNode.setReadOnly(b);
         }
 
-        String format = astNode.getString(FORMAT);
+        String format = astNode.getString(SchemaKeyword.FORMAT.string());
         if (format != null && !format.isEmpty()) {
             schemaNode.setFormat(format);
         }
+
+
+        //------------------------------
+        // TODO: These should be in a TypeAnalyzer
 
         // Capture absolute preference
         String absolute = astNode.getString(ABSOLUTE);
@@ -329,6 +332,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
 
         // Capture extensions for the FileExtensionRule
         if (astNode.get(EXTENSIONS) instanceof SequenceAstNode extNode) {
+            @SuppressWarnings("rawtypes")
             List<String> extensions = extNode.getElements().stream()
                 .filter(n -> n instanceof ScalarAstNode)
                 .map(n -> ((ScalarAstNode) n).getString())
@@ -339,9 +343,12 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                 extensions.toArray(new String[0])
             ));
         }
+        //------------------------------
+
 
         // EnumRule
-        if (astNode.get(ENUM) instanceof SequenceAstNode enumNode) {
+        if (astNode.get(SchemaKeyword.ENUM.string()) instanceof SequenceAstNode enumNode) {
+            @SuppressWarnings("rawtypes")
             List<String> options = enumNode.getElements().stream()
                 .filter(n -> n instanceof ScalarAstNode)
                 .map(n -> ((ScalarAstNode) n).getString())
@@ -350,21 +357,22 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         }
 
         // MinValueRule / MaxValueRule
-        double min = astNode.getDouble(MINIMUM, -1);
+        double min = astNode.getDouble(SchemaKeyword.MINIMUM.string(), -1);
         if (min != -1) schemaNode.addRule(new MinValueRule(min));
 
-        double max = astNode.getDouble(MAXIMUM, -1);
+        double max = astNode.getDouble(SchemaKeyword.MAXIMUM.string(), -1);
         if (max != -1) schemaNode.addRule(new MaxValueRule(max));
 
         // MinItemsRule / MaxItemsRule
-        int minItems = astNode.getInteger(MINITEMS, -1);
+        int minItems = astNode.getInteger(SchemaKeyword.MINITEMS.string(), -1);
         if (minItems != -1) schemaNode.addRule(new MinItemsRule(minItems));
 
-        int maxItems = astNode.getInteger(MAXITEMS, -1);
+        int maxItems = astNode.getInteger(SchemaKeyword.MAXITEMS.string(), -1);
         if (maxItems != -1) schemaNode.addRule(new MaxItemsRule(maxItems));
 
         // RequiredRule (usually handled at the object level in JSON schema)
-        if (astNode.get(REQUIRED) instanceof SequenceAstNode reqNode) {
+        if (astNode.get(SchemaKeyword.REQUIRED.string()) instanceof SequenceAstNode reqNode) {
+             @SuppressWarnings("rawtypes")
              List<String> requiredFields = reqNode.getElements().stream()
                 .filter(n -> n instanceof ScalarAstNode)
                 .map(n -> ((ScalarAstNode) n).getString())
@@ -374,8 +382,8 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     }
 
 
-    private static SchemaType extractType(MapAstNode node) {
-        String typeStr = node.getString(TYPE);
+    private static SchemaType extractType(@SuppressWarnings({ "rawtypes" }) MapAstNode node) {
+        String typeStr = node.getString(SchemaKeyword.TYPE.string());
         if (typeStr == null || typeStr.isEmpty()) return SchemaType.OBJECT;
         try {
             return SchemaType.valueOf(typeStr.toUpperCase());

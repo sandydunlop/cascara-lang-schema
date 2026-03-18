@@ -2,7 +2,6 @@ package io.github.qishr.cascara.schema.util;
 
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.schema.annotation.SchemaField;
-import io.github.qishr.cascara.schema.api.SchemaCompiler;
 
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +11,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ClassSchemaGeneratorTest {
-    private final SchemaNodeToPlain toPlain = new SchemaNodeToPlain();
 
     static class SimpleEntity {
         @SchemaField
@@ -106,7 +104,8 @@ class ClassSchemaGeneratorTest {
         var doc1 = generator.generate(SimpleEntity.class);
         var doc2 = generator.generate(SimpleEntity.class);
 
-        SchemaCompiler compiler = new CascaraSchemaCompiler(new NoopResolver());
+        CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
+        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
 
         var schema1 = compiler.compile(doc1, URI.create("runtime://schema1"));

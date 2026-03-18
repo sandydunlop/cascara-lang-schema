@@ -31,7 +31,7 @@ public final class ClassSchemaGenerator {
     private final Set<TypeAnalyzer> typeAnalyzers = new HashSet<>();
 
     private boolean multiClassDocument = false;
-    private MapAstNode definitionsContainer;
+    private SimpleMapNode definitionsContainer;
     private String definitionsLocation = "#/definitions/";
 
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
@@ -42,7 +42,7 @@ public final class ClassSchemaGenerator {
         return generate(null, null, clazz);
     }
 
-    public SimpleDocument generate(MapAstNode parentDoc, Class<?> clazz) {
+    public SimpleDocument generate(SimpleMapNode parentDoc, Class<?> clazz) {
         return generate(parentDoc, null, clazz);
     }
 
@@ -61,7 +61,7 @@ public final class ClassSchemaGenerator {
 
             // The caller must create the definitions container as we don't know
             // what concrete implementation it should be.
-            if (SchemaUtils.resolveFragment(parentDoc, fragment) instanceof MapAstNode map) {
+            if (SchemaUtils.resolveFragment(parentDoc, fragment) instanceof SimpleMapNode map) {
                 definitionsContainer = map;
             } else {
                 throw new SchemaException("Path does not resolve to an object", fragment);
@@ -118,7 +118,7 @@ public final class ClassSchemaGenerator {
             if (entity.get("definitions") instanceof SimpleMapNode defs) {
                 defs.getEntries().forEach(entry -> {
                     if (entry instanceof SimpleMapEntryNode e &&
-                        e.getKey() instanceof SimpleScalarNode key &&
+                        e.getKey() instanceof SimpleScalarNode &&
                         e.getValue() instanceof SimpleMapNode value) {
 
                         definitions.putIfAbsent(clazz, value);

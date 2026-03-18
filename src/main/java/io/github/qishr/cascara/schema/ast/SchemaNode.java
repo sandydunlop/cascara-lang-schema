@@ -3,7 +3,6 @@ package io.github.qishr.cascara.schema.ast;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
@@ -53,9 +52,9 @@ public interface SchemaNode extends AstNode {
     // void setHidden(boolean hidden);
 
 
-    void setCustomHint(String key, Object value);
-    Object getCustomHint(String key);
-    Map<String,Object> getCustomHints();
+    void setExtension(String key, Object value);
+    Object getExtension(String key);
+    Map<String,Object> getExtensions();
 
 
 

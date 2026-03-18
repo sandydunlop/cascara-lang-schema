@@ -2,22 +2,18 @@ package io.github.qishr.cascara.schema.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
 
 public class SchemaCompilerTests {
 
@@ -75,7 +71,7 @@ public class SchemaCompilerTests {
         // Ensure flattening worked: status should be in child properties
         assertTrue(childNode.getProperties().containsKey("status"));
 
-        Object hint = childNode.getProperties().get("status").getCustomHint("x-tracked");
+        Object hint = childNode.getProperties().get("status").getExtension("x-tracked");
         assertTrue(hint instanceof Boolean);
         assertEquals(true, hint);
     }
@@ -113,7 +109,7 @@ public class SchemaCompilerTests {
                 .getDefinition("child");
 
         assertTrue(childNode.getProperties().containsKey("base_field"));
-        Object hint = childNode.getProperties().get("base_field").getCustomHint("x-tracked");
+        Object hint = childNode.getProperties().get("base_field").getExtension("x-tracked");
         assertTrue(hint instanceof Boolean);
     }
 

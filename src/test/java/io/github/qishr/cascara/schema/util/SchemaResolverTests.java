@@ -1,6 +1,5 @@
 package io.github.qishr.cascara.schema.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
@@ -12,8 +11,6 @@ import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
-import io.github.qishr.cascara.schema.util.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
 
 public class SchemaResolverTests {
     StructuredDocument createTagDoc() {
@@ -49,7 +46,7 @@ public class SchemaResolverTests {
         CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
-        CompiledSchema tagSchema = compiler.compile(tagDoc);
+        compiler.compile(tagDoc); // This automatically registers it with the resolver
         CompiledSchema taskSchema = compiler.compile(taskDoc);
         assertNotNull(taskSchema);
     }

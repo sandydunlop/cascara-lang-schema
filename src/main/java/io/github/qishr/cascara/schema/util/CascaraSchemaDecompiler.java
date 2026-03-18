@@ -26,9 +26,6 @@ public final class CascaraSchemaDecompiler {
     private static final String ARRAY = "array";
     private static final String OBJECT = "object";
 
-    private static final String TRUE = "true";
-    private static final String FALSE = "false";
-
     // Standard JSON Schema Keywords
     private static final String ID = "$id";
     private static final String REF = "$ref";
@@ -67,7 +64,7 @@ public final class CascaraSchemaDecompiler {
         for (var e : standardKeywords(compiled).entrySet()) {
             decompiled.put(e.getKey(), scalarValue(e.getValue()));
         }
-        for (var e : customHints(compiled).entrySet()) {
+        for (var e : extensions(compiled).entrySet()) {
             decompiled.put(e.getKey(), scalarValue(e.getValue()));
         }
 
@@ -192,9 +189,9 @@ public final class CascaraSchemaDecompiler {
         return map;
     }
 
-    private Map<String, Object> customHints(SchemaNode compiled) {
+    private Map<String, Object> extensions(SchemaNode compiled) {
         Map<String, Object> map = new HashMap<>();
-        compiled.getCustomHints().forEach((key,value) -> {
+        compiled.getExtensions().forEach((key,value) -> {
             map.put(key, value);
         });
         return map;

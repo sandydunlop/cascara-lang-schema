@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public abstract class BaseSchemaNode implements SchemaNode {
     private String name;
@@ -29,11 +28,12 @@ public abstract class BaseSchemaNode implements SchemaNode {
     private String format = "";
     private final Map<String, String> formatOptions = new HashMap<>();
     private boolean readOnly = false; // Default to false
-    private final java.util.Map<String, Object> customHints = new java.util.HashMap<>();
+    private final java.util.Map<String, Object> extensions = new java.util.HashMap<>();
 
     private final List<SchemaNode> allOf = new ArrayList<>();
-    private final List<SchemaNode> anyOf = new ArrayList<>();
-    private final List<SchemaNode> oneOf = new ArrayList<>();
+    // TODO:
+    // private final List<SchemaNode> anyOf = new ArrayList<>();
+    // private final List<SchemaNode> oneOf = new ArrayList<>();
 
     public BaseSchemaNode(String name, SchemaType type) {
         this.name = name;
@@ -89,18 +89,18 @@ public abstract class BaseSchemaNode implements SchemaNode {
     }
 
     @Override
-    public void setCustomHint(String key, Object value) {
-        customHints.put(key, value);
+    public void setExtension(String key, Object value) {
+        extensions.put(key, value);
     }
 
     @Nullable
     @Override
-    public Object getCustomHint(String key) {
-        return customHints.get(key);
+    public Object getExtension(String key) {
+        return extensions.get(key);
     }
 
-    @Override public Map<String,Object> getCustomHints() {
-        return customHints;
+    @Override public Map<String,Object> getExtensions() {
+        return extensions;
     }
 
     @Override public String getName() { return name; }

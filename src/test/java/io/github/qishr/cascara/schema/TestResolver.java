@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
-import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.api.TypeAnalyzer;
 import io.github.qishr.cascara.schema.ast.SchemaNode;

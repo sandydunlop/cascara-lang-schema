@@ -18,4 +18,5 @@ public interface SchemaResolver {
     Map<URI, CompiledSchema> getCachedSchemas();
     void registerTypeAnalyzer(TypeAnalyzer ta);
     void registerSchema(URI uri, CompiledSchema compiled);
+    void registerAnchor(URI uri, AstNode node);
 }

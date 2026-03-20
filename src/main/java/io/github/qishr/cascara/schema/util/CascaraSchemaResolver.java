@@ -28,7 +28,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
     private final SchemaParser parserService;
     private final ClassSchemaGenerator generator;
 
-    private final Map<URI, AstNode> documentCache = new HashMap<>();
+    private final Map<URI, AstNode> nodeCache = new HashMap<>();
     private final Map<URI, CompiledSchema> schemaCache = new HashMap<>();
 
     public CascaraSchemaResolver(SchemaParser parserService, ContentLoader contentLoaderService) {
@@ -37,8 +37,19 @@ public class CascaraSchemaResolver implements SchemaResolver {
         this.generator = new ClassSchemaGenerator();
     }
 
+    @Override
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
         generator.registerTypeAnalyzer(ta);
+    }
+
+    @Override
+    public void registerSchema(URI uri, CompiledSchema compiled) {
+        schemaCache.put(uri, compiled);
+    }
+
+    @Override
+    public void registerAnchor(URI uri, AstNode node) {
+        nodeCache.put(uri, node);
     }
 
     @Override
@@ -80,11 +91,117 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return schemaCache;
     }
 
-    public URI getSchemaUriForClass(Class<?> clazz) {
-        String origin = SCHEMA_SERVICE_URI + clazz.getName();
-        URI originUri = URI.create(origin);
-        return originUri;
-    }
+    // @Override
+    // public SchemaNode resolve(String ref, SchemaNode relativeTo) throws SchemaException {
+    //     try {
+    //         URI baseUri = relativeTo.getOriginUri();
+    //         URI targetUri = baseUri.resolve(ref);
+
+
+
+    //         // -------------------------- New Code
+    //         // 1. Instant Lookup: If it's an anchor or a pre-cached document, we're done.
+    //         AstNode targetAst = nodeCache.get(targetUri);
+
+    //         if (targetAst == null) {
+    //             // 2. Fallback: If it's a JSON Pointer (starts with /), we walk the tree.
+    //             String fragment = targetUri.getFragment();
+    //             if (fragment != null && fragment.startsWith("/")) {
+    //                 // Load the base document first, then walk it
+    //                 URI docUri = stripFragment(targetUri);
+    //                 AstNode root = getOrLoadAst(docUri);
+    //                 targetAst = resolveFragment(fragment, root);
+    //             }
+    //         }
+    //         // --------------------------
+
+
+
+
+    //         // -------------------------- OLD CODE
+    //         SchemaCompiler compiler = new CascaraSchemaCompiler(this);
+    //         URI docUri;
+
+    //         if (isSameDocument(baseUri, targetUri)) {
+    //             // Same document: use the origin AST of the current schema
+    //             docUri = baseUri;
+    //             AstNode rootAst = relativeTo.getOriginAst();
+    //             String fragment = targetUri.getFragment();
+
+    //             targetAst = (fragment != null && !fragment.isEmpty())
+    //                 ? resolveFragment("#" + fragment, rootAst)
+    //                 : rootAst;
+    //         } else {
+    //             // Different document: load/parse/cache it
+    //             docUri = new URI(
+    //                 targetUri.getScheme(),
+    //                 targetUri.getAuthority(),
+    //                 targetUri.getPath(),
+    //                 targetUri.getQuery(),
+    //                 null
+    //             ).normalize();
+
+    //             // 1. Check if we already have this compiled
+    //             CompiledSchema existingSchema = schemaCache.get(docUri);
+    //             if (existingSchema != null) {
+    //                 String fragment = targetUri.getFragment();
+    //                 if (fragment == null || fragment.isEmpty()) {
+    //                     // Return the origin AST of the root
+    //                     targetAst = existingSchema.getRoot().getOriginAst();
+    //                 } else {
+    //                     // If there's a fragment, we still need the AST to find the specific part
+    //                     targetAst = resolveFragment(fragment, existingSchema.getRoot().getOriginAst());
+    //                 }
+    //             } else {
+
+    //                 StructuredDocument doc = (StructuredDocument) nodeCache.computeIfAbsent(docUri, uri -> {
+    //                     if (contentLoaderService == null) {
+    //                         throw new SchemaException("Content loader required for URI", uri.toString());
+    //                     }
+    //                     try {
+    //                         ResourceContent content = contentLoaderService.getContent(uri);
+    //                         return parserService.parseContent(content);
+    //                     } catch (IOException e) {
+    //                         e.printStackTrace();
+    //                         return null;
+    //                     }
+    //                 });
+    //                 // CompiledSchema doc = getSchema(docUri);
+
+    //                 if (doc == null) return null;
+
+    //                 String fragment = targetUri.getFragment();
+    //                 targetAst = (fragment != null && !fragment.isEmpty())
+    //                     ? resolveFragment(fragment, doc)
+    //                     : doc;
+    //             }
+    //         }
+    //         // --------------------------
+
+
+
+
+    //         if (targetAst == null) return null;
+
+    //         // Compile whatever we resolved into a SchemaNode
+    //         if (targetAst instanceof StructuredDocument structuredDoc) {
+    //             CompiledSchema compiledSchema = compiler.compile(structuredDoc, docUri);
+    //             return compiledSchema.getRoot();
+    //         } else if (targetAst instanceof MapAstNode map) {
+    //             return compiler.compileSubSchema(map, docUri);
+    //         }
+
+
+
+
+    //         throw new SchemaException("Resolver returned unsupported AST node type: " +
+    //                                   targetAst.getClass(), ref);
+
+    //     } catch (Exception e) {
+    //         e.printStackTrace();
+    //         throw new SchemaException("Resolution failed: " + e.getMessage(), e, ref);
+    //     }
+    // }
 
     @Override
     public SchemaNode resolve(String ref, SchemaNode relativeTo) throws SchemaException {
@@ -93,85 +210,60 @@ public class CascaraSchemaResolver implements SchemaResolver {
             URI targetUri = baseUri.resolve(ref);
 
             SchemaCompiler compiler = new CascaraSchemaCompiler(this);
-            AstNode targetAst;
-            URI docUri;
+            URI docUri = stripFragment(targetUri);
 
-            if (isSameDocument(baseUri, targetUri)) {
-                // Same document: use the origin AST of the current schema
-                docUri = baseUri;
-                AstNode rootAst = relativeTo.getOriginAst();
+            // 1. Instant Lookup (Anchors or already cached nodes)
+            AstNode targetAst = nodeCache.get(targetUri);
+
+            if (targetAst == null) {
                 String fragment = targetUri.getFragment();
 
-                targetAst = (fragment != null && !fragment.isEmpty())
-                    ? resolveFragment("#" + fragment, rootAst)
-                    : rootAst;
-            } else {
-                // Different document: load/parse/cache it
-                docUri = new URI(
-                    targetUri.getScheme(),
-                    targetUri.getAuthority(),
-                    targetUri.getPath(),
-                    targetUri.getQuery(),
-                    null
-                ).normalize();
-
-                // 1. Check if we already have this compiled
-                CompiledSchema existingSchema = schemaCache.get(docUri);
-                if (existingSchema != null) {
-                    String fragment = targetUri.getFragment();
-                    if (fragment == null || fragment.isEmpty()) {
-                        // Return the origin AST of the root
-                        targetAst = existingSchema.getRoot().getOriginAst();
+                // 2. Short-circuit: Is it in the same document we are already looking at?
+                // if (isSameDocument(baseUri, targetUri)) {
+                //     AstNode rootAst = relativeTo.getOriginAst();
+                //     // Ensure fragment exists and is a path, otherwise use root
+                //     targetAst = (fragment != null && !fragment.isEmpty())
+                //         ? resolveFragment(fragment, rootAst)
+                //         : rootAst;
+                // }
+                if (isSameDocument(baseUri, targetUri)) {
+                    AstNode rootAst = relativeTo.getOriginAst();
+                    if (fragment != null && !fragment.isEmpty()) {
+                        // Strip the '#' if present before passing to resolveFragment
+                        String path = fragment.startsWith("#") ? fragment.substring(1) : fragment;
+                        targetAst = resolveFragment(path, rootAst);
                     } else {
-                        // If there's a fragment, we still need the AST to find the specific part
-                        targetAst = resolveFragment(fragment, existingSchema.getRoot().getOriginAst());
+                        targetAst = rootAst;
                     }
-                } else {
-
-                    StructuredDocument doc = (StructuredDocument) documentCache.computeIfAbsent(docUri, uri -> {
-                        if (contentLoaderService == null) {
-                            throw new SchemaException("Content loader required for URI", uri.toString());
-                        }
-                        try {
-                            ResourceContent content = contentLoaderService.getContent(uri);
-                            return parserService.parseContent(content);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return null;
-                        }
-                    });
-                    // CompiledSchema doc = getSchema(docUri);
-
-                    if (doc == null) return null;
-
-                    String fragment = targetUri.getFragment();
-                    targetAst = (fragment != null && !fragment.isEmpty())
-                        ? resolveFragment(fragment, doc)
-                        : doc;
+                }
+                else {
+                    // 3. Different document: Now we use the loader
+                    if (fragment != null && fragment.startsWith("/")) {
+                        AstNode root = getOrLoadAst(docUri);
+                        targetAst = resolveFragment(fragment, root);
+                    } else {
+                        // Plain anchor in external doc
+                        getSchema(docUri);
+                        targetAst = nodeCache.get(targetUri);
+                    }
                 }
             }
 
+            if (targetAst == null) {
+                throw new SchemaException("Could not resolve reference: " + ref, targetUri.toString());
+            }
 
-
-
-            if (targetAst == null) return null;
-
-            // Compile whatever we resolved into a SchemaNode
+            // ... rest of compilation logic (unchanged)
             if (targetAst instanceof StructuredDocument structuredDoc) {
-                CompiledSchema compiledSchema = compiler.compile(structuredDoc, docUri);
-                return compiledSchema.getRoot();
+                return compiler.compile(structuredDoc, docUri).getRoot();
             } else if (targetAst instanceof MapAstNode map) {
                 return compiler.compileSubSchema(map, docUri);
             }
 
-
-
-
-            throw new SchemaException("Resolver returned unsupported AST node type: " +
-                                      targetAst.getClass(), ref);
+            throw new SchemaException("Unsupported AST type: " + targetAst.getClass(), ref);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            if (e instanceof SchemaException se) throw se;
             throw new SchemaException("Resolution failed: " + e.getMessage(), e, ref);
         }
     }
@@ -189,9 +281,31 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return node;
     }
 
+    public URI getSchemaUriForClass(Class<?> clazz) {
+        String origin = SCHEMA_SERVICE_URI + clazz.getName();
+        URI originUri = URI.create(origin);
+        return originUri;
+    }
+
     //
     //
     //
+
+    private AstNode getOrLoadAst(URI docUri) {
+        // Check nodeCache first (which stores both documents and anchors)
+        AstNode existing = nodeCache.get(docUri);
+        if (existing != null) return existing;
+
+        try {
+            ResourceContent content = contentLoaderService.getContent(docUri);
+            StructuredDocument doc = parserService.parseContent(content);
+            // Cache the root document node
+            nodeCache.put(docUri, doc);
+            return doc;
+        } catch (IOException e) {
+            throw new SchemaException("Could not load AST for URI", e, docUri.toString());
+        }
+    }
 
     private String extractName(String path) {
         String name = null;
@@ -224,7 +338,11 @@ public class CascaraSchemaResolver implements SchemaResolver {
                Objects.equals(base.getPath(), target.getPath());
     }
 
-    public void registerSchema(URI uri, CompiledSchema compiled) {
-        schemaCache.put(uri, compiled);
+    private URI stripFragment(URI uri) {
+        try {
+            return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null);
+        } catch (Exception e) {
+            throw new SchemaException("Failed to strip fragment from URI", e, uri.toString());
+        }
     }
 }

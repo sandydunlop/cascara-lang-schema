@@ -1,5 +1,6 @@
 module cascara.schema {
     requires transitive cascara.common;
+    requires cascara.lang.json;
 
     exports io.github.qishr.cascara.schema;
     exports io.github.qishr.cascara.schema.annotation;

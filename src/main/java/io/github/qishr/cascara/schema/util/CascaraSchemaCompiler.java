@@ -5,6 +5,7 @@ import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.github.qishr.cascara.common.diagnostic.Reporter;
 import io.github.qishr.cascara.common.diagnostic.SimpleReporter;
@@ -41,7 +42,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
 
     // Default names for things
     private static final String ROOT = "root";
-    private static final String FRAGMENT = "fragment";
     private static final String ITEM = "item";
 
     private final SchemaResolver resolver;
@@ -110,60 +110,8 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
 
         CompiledSchema compiled = new CompiledSchema(name, (ObjectSchemaNode) schemaRoot);
         resolver.registerSchema(originUri, compiled);
+        finalizeNodes(compiled.getRoot());
         return compiled;
-    }
-
-    @Override
-    // public SchemaNode compileSubSchema(@SuppressWarnings("rawtypes") MapAstNode node, URI originUri) {
-    //     SchemaNode rootContext = null;
-
-    //     // Check if we can safely ask the resolver without recursing.
-    //     // If we're already in the middle of a resolve/compile for this URI,
-    //     // we should skip the resolver lookup.
-    //     try {
-    //         // Only ask the resolver if we aren't currently "inside"
-    //         // a resolution for this specific originUri.
-    //         CompiledSchema existing = resolver.getSchema(originUri);
-    //         if (existing != null) {
-    //             rootContext = existing.getRoot();
-    //         }
-    //     } catch (Exception ignored) {}
-
-    //     if (rootContext == null) {
-    //         // Fallback to a virtual root to prevent the NULL ROOT crash
-    //         // but avoid triggering a new compilation.
-    //         rootContext = new ObjectSchemaNode("fragment-root");
-    //         ((BaseSchemaNode) rootContext).setOriginUri(originUri);
-    //     }
-
-    //     String name = node.getString(NAME);
-    //     if (name == null) name = FRAGMENT;
-
-    //     // return processNode(node, name, originUri, rootContext);
-    //     // TODO: originUri the same as the fragment's URI?!
-    //     return processNode(node, name, originUri, originUri, rootContext);
-    // }
-
-    public SchemaNode compileSubSchema(MapAstNode node, URI originUri) {
-        SchemaNode rootContext = null;
-        try {
-            CompiledSchema existing = resolver.getSchema(originUri);
-            if (existing != null) {
-                rootContext = existing.getRoot();
-            }
-        } catch (Exception ignored) {}
-
-        // FIX: If we found the real root, use it!
-        // Don't just settle for fragment-root if originUri matches an existing schema.
-        if (rootContext == null) {
-            rootContext = new ObjectSchemaNode("fragment-root");
-            ((BaseSchemaNode) rootContext).setOriginUri(originUri);
-        }
-
-        String name = node.getString(NAME);
-        if (name == null) name = FRAGMENT;
-
-        return processNode(node, name, originUri, originUri, rootContext);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -175,16 +123,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                 ? logicalBaseUri.resolve(idValue)
                 : logicalBaseUri;
 
-        if (idValue != null) {
-            resolver.registerAnchor(currentBase, astNode);
-        }
-
         String anchor = astNode.getString(SchemaKeyword.ANCHOR.string());
-        if (anchor != null && !anchor.isEmpty()) {
-            resolver.registerAnchor(currentBase.resolve("#" + anchor), astNode);
-        }
-
-        // 2. Instantiate the Node
         String refValue = astNode.getString(SchemaKeyword.REF.string());
         BaseSchemaNode schemaNode;
 
@@ -198,6 +137,16 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                 default     -> new ScalarSchemaNode(name, type);
             };
         }
+
+
+        if (idValue != null) {
+            resolver.registerSchemaNode(currentBase, schemaNode);
+        }
+        if (anchor != null && !anchor.isEmpty()) {
+            resolver.registerSchemaNode(currentBase.resolve("#" + anchor), schemaNode);
+        }
+
+
 
         // --- Metadata ---
         schemaNode.setOriginAst(astNode);
@@ -274,25 +223,69 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         return schemaNode;
     }
 
-    @SuppressWarnings("unchecked")
-    private void processComposition(@SuppressWarnings("rawtypes") MapAstNode astNode, SchemaKeyword key, BaseSchemaNode parent, URI uri, SchemaNode root) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void processComposition( MapAstNode astNode, SchemaKeyword key, BaseSchemaNode parent, URI uri, SchemaNode root) {
         if (astNode.get(key.string()) instanceof SequenceAstNode seq) {
             seq.getElements().forEach(element -> {
                 if (element instanceof MapAstNode m) {
-                    // SchemaNode subSchema = processNode(m, key + "-item", uri, root);
                     // TODO: Again, originUri same as node URI?!
-                    SchemaNode subSchema = processNode(m, key + "-item", uri, uri, root);
+                    SchemaNode subSchema = processNode(m, key.string() + "-item", uri, uri, root);
 
+                    // ATTACH IT to the parent
                     if (key == SchemaKeyword.ALL_OF) {
                         parent.addAllOf(subSchema);
-                        // If we are building an object, pull in the inherited properties
-                        if (parent instanceof ObjectSchemaNode targetObj) {
-                            flattenInheritedProperties(targetObj, subSchema);
-                        }
                     }
+                    // else if (key == SchemaKeyword.ANY_OF) {
+                    //     parent.addAnyOf(subSchema);
+                    // } else if (key == SchemaKeyword.ONE_OF) {
+                    //     parent.addOneOf(subSchema);
+                    // }
                     // oneOf/anyOf can be stored for validation, but allOf is our "extends"
                 }
             });
+        }
+    }
+
+    private void flattenInheritedProperties(ObjectSchemaNode target, SchemaNode source) {
+        SchemaNode actualSource = source;
+        if (source instanceof LazySchemaNode lazy) {
+            actualSource = lazy.getResolved();
+        }
+
+        if (actualSource instanceof ObjectSchemaNode sourceObj) {
+            // IMPORTANT: Ensure the source itself is finalized before we steal its properties.
+            // If it was already finalized, this should be a no-op or a quick guard check.
+            finalizeNodes(sourceObj);
+
+            sourceObj.getProperties().forEach((propName, propNode) -> {
+                if (!target.getProperties().containsKey(propName)) {
+                    target.addProperty(propName, propNode);
+                }
+            });
+
+            // Continue up the chain
+            for (SchemaNode grandParent : sourceObj.getAllOf()) {
+                flattenInheritedProperties(target, grandParent);
+            }
+        }
+    }
+
+    private void finalizeNodes(SchemaNode node) {
+        if (node == null) return;
+
+        if (node instanceof ObjectSchemaNode obj) {
+            // Step A: Recurse to children first (Depth-first)
+            // This ensures nested objects are ready before the parent uses them.
+            obj.getDefinitions().values().forEach(this::finalizeNodes);
+            obj.getProperties().values().forEach(this::finalizeNodes);
+
+            // Step B: Flatten Compositions
+            for (SchemaNode base : new java.util.ArrayList<>(obj.getAllOf())) {
+                flattenInheritedProperties(obj, base);
+            }
+        }
+        else if (node instanceof ArraySchemaNode array) {
+            finalizeNodes(array.getItemSchema());
         }
     }
 
@@ -334,26 +327,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             }
         });
         return result;
-    }
-
-    private void flattenInheritedProperties(ObjectSchemaNode target, SchemaNode source) {
-        // We resolve the lazy node to get the actual properties
-        SchemaNode actualSource = source;
-        if (source instanceof LazySchemaNode lazy) {
-            actualSource = lazy.getResolved();
-        }
-
-        if (actualSource instanceof ObjectSchemaNode sourceObj) {
-            sourceObj.getProperties().forEach((propName, propNode) -> {
-                // Only add if the child hasn't overridden it locally
-                if (!target.getProperties().containsKey(propName)) {
-                    target.addProperty(propName, propNode);
-                }
-            });
-
-            // Follow the chain up (Grandparents)
-            actualSource.getAllOf().forEach(grandParent -> flattenInheritedProperties(target, grandParent));
-        }
     }
 
     @SuppressWarnings("unchecked")

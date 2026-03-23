@@ -38,11 +38,8 @@ public class LazySchemaNode extends BaseSchemaNode {
 
     public SchemaNode getResolved() throws SchemaException {
         if (resolvedNode == null) {
-            AstNode result;
-            result = resolver.resolve(ref, this);
-            if (result instanceof SchemaNode sn) {
-                this.resolvedNode = sn;
-            } else {
+            resolvedNode = resolver.resolve(ref, this);
+            if (resolvedNode == null) {
                 // Fallback or error if the resolver returned raw AST
                 // instead of a compiled schema
                 throw new SchemaException("BUG: RESOLUTION FAILED", ref);

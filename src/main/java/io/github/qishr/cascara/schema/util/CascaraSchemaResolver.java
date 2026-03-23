@@ -6,7 +6,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 
 import io.github.qishr.cascara.common.content.ContentLoader;
@@ -15,8 +14,7 @@ import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
+import io.github.qishr.cascara.common.util.UriScheme;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.SchemaKeyword;
@@ -26,6 +24,7 @@ import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.api.TypeAnalyzer;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.BaseSchemaNode;
+import io.github.qishr.cascara.schema.ast.LazySchemaNode;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
 import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
@@ -33,12 +32,14 @@ import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
 public class CascaraSchemaResolver implements SchemaResolver {
     private static final String SCHEMA_SERVICE_URI = "cascara://core/schema-service/";
 
-    private final ContentLoader contentLoaderService;
+    private ContentLoader contentLoaderService;
     private final SchemaParser parserService;
     private final ClassSchemaGenerator generator;
 
-    private final Map<URI, AstNode> nodeCache = new HashMap<>();
-    private final Map<URI, CompiledSchema> schemaCache = new HashMap<>();
+    private static final Map<URI,ResourceContent> metaSchemaResources = new HashMap<>();
+
+    private final Map<URI, SchemaNode> schemaNodeCache = new HashMap<>();
+    private final Map<URI, CompiledSchema> schemaDocCache = new HashMap<>();
 
     public CascaraSchemaResolver(SchemaParser parserService, ContentLoader contentLoaderService) {
         this.contentLoaderService = contentLoaderService;
@@ -54,163 +55,151 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
     @Override
     public void registerSchema(URI uri, CompiledSchema compiled) {
-        schemaCache.put(uri, compiled);
+        schemaDocCache.put(uri, compiled);
     }
 
     @Override
-    public void registerAnchor(URI uri, AstNode node) {
-        nodeCache.put(uri, node);
+    public void registerSchemaNode(URI uri, SchemaNode node) {
+        schemaNodeCache.put(uri, node);
     }
 
     @Override
     public CompiledSchema getSchemaForClass(Class<?> clazz) throws SchemaException {
         URI originUri = getSchemaUriForClass(clazz);
-        CompiledSchema schema = schemaCache.get(originUri);
+        CompiledSchema schema = schemaDocCache.get(originUri);
         if (schema == null) {
             schema = generateSchemaForClass(clazz);
-            schemaCache.put(originUri, schema);
+            schemaDocCache.put(originUri, schema);
         }
-
         return schema;
     }
 
+    /// Returns the `CompiledSchema` indicated by the given `URI`.
+    /// If the `CompiledSchema` is cached, it will be retrieved from the cache,
+    /// otherwise it will be compiled and returned.
     @Override
     public CompiledSchema getSchema(URI uri) throws SchemaException {
-        System.out.println("SchemaResolver.getSchema: " + uri);
-
-        CompiledSchema schema = schemaCache.get(uri);
+        CompiledSchema schema = schemaDocCache.get(uri);
         if (schema != null) return schema;
 
-        System.out.println("SchemaResolver.getSchema: nto found in cache. Calling getOrLoadAst.");
+        // // If it's a cascara URI and it's not in the cache, it's a bug in the
+        // // bootstrap/compilation order. Do NOT ask the ContentLoader.
+        // if (UriScheme.of(uri) == UriScheme.CASCARA) {
+        //     throw new SchemaException(
+        //         "Cascara schema not found in resolver cache. " +
+        //         "Ensure the schema is registered before resolution.", uri.toString()
+        //     );
+        // }
 
-        // 1. Load the document (this handles content fetching and parsing)
-        // We cast to StructuredDocument because that's what parseContent returns
-        StructuredDocument doc = (StructuredDocument)getOrLoadAst(uri);
+        StructuredDocument doc;
+        try {
+            ResourceContent content = contentLoaderService.getContent(uri);
+            doc = parseContent(content);
+        } catch (IOException e) {
+            throw new SchemaException("Could not load AST for URI", e, uri.toString());
+        }
 
-        // 2. Compile using the standard interface method
         SchemaCompiler compiler = new CascaraSchemaCompiler(this);
-        schema = compiler.compile(doc, uri);
-
-        // 3. Cache the result
-        schemaCache.put(uri, schema);
-
-        return schema;
+        return compiler.compile(doc, uri);
     }
 
     @Override
     public Map<URI, CompiledSchema> getCachedSchemas() {
-        return schemaCache;
+        return schemaDocCache;
     }
 
     @Override
     public SchemaNode resolve(String ref, SchemaNode relativeTo) throws SchemaException {
-        try {
-            URI baseUri = relativeTo.getOriginUri();
-            URI targetUri = baseUri.resolve(ref);
+        URI baseUri = relativeTo.getOriginUri();
+        URI targetUri = baseUri.resolve(ref);
+        URI docUri = stripFragment(targetUri);
 
-            SchemaCompiler compiler = new CascaraSchemaCompiler(this);
-            URI docUri = stripFragment(targetUri);
+        // If the compiled `SchemaNode` is cached, return it
+        SchemaNode schemaNode = schemaNodeCache.get(targetUri);
+        if (schemaNode != null) return schemaNode;
 
-            // Instant Lookup (Anchors or already cached nodes)
-            AstNode targetAst = nodeCache.get(targetUri);
+        // Get the `CompiledSchema` document
+        CompiledSchema schemaDoc = getSchema(docUri);
 
-            if (targetAst == null) {
-                String fragment = targetUri.getFragment();
-                if (isSameDocument(baseUri, targetUri)) {
-                    AstNode rootAst = relativeTo.getOriginAst();
-                    if (fragment != null && !fragment.isEmpty()) {
-                        // Strip the '#' if present before passing to resolveFragment
-                        String path = fragment.startsWith("#") ? fragment.substring(1) : fragment;
-                        targetAst = resolveFragment(path, rootAst);
-                    } else {
-                        targetAst = rootAst;
-                    }
-                }
-                else {
-                    // Different document
-                    CompiledSchema externalSchema = getSchema(docUri);
-                    AstNode root = externalSchema.getRoot().getOriginAst();
-                    if (fragment != null && !fragment.isEmpty()) {
-                        if (fragment.startsWith("/")) {
-                            // It's a JSON Pointer: resolve against the root we just got
-                            targetAst = resolveFragment(fragment, root);
-                        } else {
-                            // It's a plain anchor (#item)
-                            // Check the nodeCache. If it's null, the compiler either
-                            // skipped registration or used a different URI key.
-                            targetAst = nodeCache.get(targetUri);
+        // Resolve the fragment against the schema
+        String fragment = targetUri.getFragment();
+        schemaNode = resolveFragment(schemaDoc, fragment);
 
-                            // Fallback: If the cache missed, we can try to find it in the root
-                            if (targetAst == null) {
-                                targetAst = findNodeByAnchor(root, fragment);
-                            }
-                        }
-                    } else {
-                        targetAst = root;
-                    }
-                }
-            }
-
-            if (targetAst == null) {
-                throw new SchemaException("Could not resolve reference: " + ref, targetUri.toString());
-            }
-
-            if (targetAst instanceof StructuredDocument structuredDoc) {
-                return compiler.compile(structuredDoc, docUri).getRoot();
-            } else if (targetAst instanceof MapAstNode map) {
-                // CompiledSchema fullSchema = getSchema(docUri);
-                // if (fullSchema != null) {
-                //     // Search the already-compiled tree for the node matching this AST
-                //     SchemaNode existingNode = findNodeByAst(fullSchema.getRoot(), map);
-                //     if (existingNode != null) {
-                //         return existingNode;
-                //     }
-                // }
-
-                // Fallback only if the document hasn't been compiled yet
-                // (though getSchema usually triggers compilation)
-                return compiler.compileSubSchema(map, docUri);
-            }
-
-            throw new SchemaException("Unsupported AST type: " + targetAst.getClass(), ref);
-
-        } catch (Exception e) {
-            if (e instanceof SchemaException se) throw se;
-            throw new SchemaException("Resolution failed: " + e.getMessage(), e, ref);
+        if (schemaNode == null) {
+            throw new SchemaException("Resolution failed",  ref);
         }
+
+        return schemaNode;
+    }
+
+    //
+    //
+    //
+
+    private URI getSchemaUriForClass(Class<?> clazz) {
+        String origin = SCHEMA_SERVICE_URI + clazz.getName();
+        URI originUri = URI.create(origin);
+        return originUri;
+    }
+
+    private SchemaNode resolveFragment(CompiledSchema schemaDoc, String fragment) {
+        if (fragment == null || fragment.isEmpty()) {
+            return schemaDoc.getRoot();
+        }
+
+        AstNode targetAst = null;
+
+        // 1. Try resolving as a JSON Pointer (e.g., /definitions/bug)
+        if (fragment.startsWith("/")) {
+            try {
+                targetAst = SchemaUtils.resolveFragment(schemaDoc.getRoot().getOriginAst(), fragment);
+            } catch (Exception ignored) {
+                // Pointer resolution failed, might be an anchor instead
+            }
+        }
+
+        // 2. If not a pointer, or pointer failed, treat as a Plain Name Anchor
+        if (targetAst == null) {
+            targetAst = findNodeByAnchor(schemaDoc.getRoot().getOriginAst(), fragment);
+        }
+
+        // 3. Link the found AST back to the compiled SchemaNode tree
+        return findNodeByAst(schemaDoc.getRoot(), targetAst);
     }
 
     private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst) {
         if (root == null || targetAst == null) return null;
 
-        // 1. Check if this is the node we're looking for
-        if (root instanceof BaseSchemaNode base && base.getOriginAst() == targetAst) {
+        // 1. If this is the node, check if it's the "Real" one.
+        // We only return it immediately if it's NOT lazy.
+        if (!(root instanceof LazySchemaNode) &&
+            root instanceof BaseSchemaNode base &&
+            base.getOriginAst() == targetAst) {
             return root;
         }
 
-        // 2. Search Properties if it's an Object
+        // 2. SEARCH DEFINITIONS FIRST.
+        // This is the fix for the 'entities' schema. By looking here first,
+        // we find the concrete ObjectSchemaNode before we ever see the Lazy version.
         if (root instanceof ObjectSchemaNode obj) {
-            for (SchemaNode prop : obj.getProperties().values()) {
-                SchemaNode found = findNodeByAst(prop, targetAst);
-                if (found != null) return found;
-            }
-            // Also check definitions!
             for (SchemaNode def : obj.getDefinitions().values()) {
                 SchemaNode found = findNodeByAst(def, targetAst);
                 if (found != null) return found;
             }
+
+            // 3. SEARCH PROPERTIES SECOND.
+            for (SchemaNode prop : obj.getProperties().values()) {
+                SchemaNode found = findNodeByAst(prop, targetAst);
+                if (found != null) return found;
+            }
         }
 
-        // 3. Search Item Template if it's an Array
-        if (root instanceof ArraySchemaNode arr) {
-            SchemaNode found = findNodeByAst(arr.getItemSchema(), targetAst);
-            if (found != null) return found;
-        }
-
-        // 4. Search Composition (allOf, anyOf, oneOf)
-        for (SchemaNode sub : root.getAllOf()) {
-            SchemaNode found = findNodeByAst(sub, targetAst);
-            if (found != null) return found;
+        // 4. FALLBACK: If we've searched the whole tree and ONLY found a Lazy node,
+        // we might have to return it to avoid a total failure, but ideally,
+        // Phase 1 should have created a concrete node for every definition.
+        if (root instanceof LazySchemaNode lazy &&
+            ((BaseSchemaNode)lazy).getOriginAst() == targetAst) {
+            return root;
         }
 
         return null;
@@ -243,88 +232,12 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return null;
     }
 
-    @Override
-    public AstNode resolveFragment(String path, AstNode root) throws SchemaException {
-        AstNode node = SchemaUtils.resolveFragment(root, path);
-
-        // Infer the fragment's name from its path
-        String name = extractName(path);
-        if (name != null && node instanceof SimpleMapNode map) {
-            map.put("name", new SimpleScalarNode(name));
-        }
-
-        return node;
-    }
-
-    public URI getSchemaUriForClass(Class<?> clazz) {
-        String origin = SCHEMA_SERVICE_URI + clazz.getName();
-        URI originUri = URI.create(origin);
-        return originUri;
-    }
-
-    //
-    //
-    //
-
-    private AstNode getOrLoadAst(URI docUri) {
-        System.out.println("SchemaResolver.getOrLoadAst: " + docUri);
-
-        // Check nodeCache first (which stores both documents and anchors)
-        AstNode existing = nodeCache.get(docUri);
-        if (existing != null) return existing;
-
-        // 2. STOPS THE LOOP:
-        // If it's a cascara URI and it's not in the cache, it's a bug in the
-        // bootstrap/compilation order. Do NOT ask the ContentLoader.
-        if ("cascara".equals(docUri.getScheme())) {
-            throw new SchemaException(
-                "Internal schema not found in Resolver cache. " +
-                "Ensure the schema is registered before resolution.", docUri.toString()
-            );
-        }
-
-        System.out.println("SchemaResolver.getOrLoadAst: Not found in cache. calling contentLoaderService.getContent: " + docUri);
-
-        try {
-            ResourceContent content = contentLoaderService.getContent(docUri);
-            StructuredDocument doc = parseContent(content);
-            // Cache the root document node
-            nodeCache.put(docUri, doc);
-            return doc;
-        } catch (IOException e) {
-            throw new SchemaException("Could not load AST for URI", e, docUri.toString());
-        }
-    }
-
-    private String extractName(String path) {
-        String name = null;
-        String[] segments = path.split("/");
-        for (String segment : segments) {
-            if (segment.isEmpty()) continue;
-            name = segment;
-        }
-        return name;
-    }
-
     private CompiledSchema generateSchemaForClass(Class<?> clazz) throws SchemaException {
         URI originUri = getSchemaUriForClass(clazz);
-
         SchemaCompiler compiler = new CascaraSchemaCompiler(this);
         StructuredDocument schemaDoc = generator.generate(clazz);
-
-        // TODO: Logging
-        // AstUtil.printAst(schemaDoc.getRoot(), 0);
-
         CompiledSchema compiledSchema = compiler.compile(schemaDoc, originUri);
-
         return compiledSchema;
-    }
-
-    private boolean isSameDocument(URI base, URI target) {
-        // Compare scheme, authority, and path, ignoring the fragment
-        return Objects.equals(base.getScheme(), target.getScheme()) &&
-               Objects.equals(base.getAuthority(), target.getAuthority()) &&
-               Objects.equals(base.getPath(), target.getPath());
     }
 
     private URI stripFragment(URI uri) {
@@ -345,11 +258,11 @@ public class CascaraSchemaResolver implements SchemaResolver {
     }
 
     /// Loads the core JSON Schema meta-schemas from the module's resources
-    /// and registers them in the nodeCache using their official URIs.
+    /// and registers them in the `schemaDocCache` using their official URIs.
     private void loadBuiltInMetaSchemas() {
+        // 1. Load and cache the meta-schema content
         Properties props = new Properties();
         String propsPath = "/meta-schema/origin.properties";
-
         try (InputStream is = getClass().getResourceAsStream(propsPath)) {
             if (is == null) return;
 
@@ -361,23 +274,32 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
                 try (InputStream schemaStream = getClass().getResourceAsStream("/meta-schema/" + fileName)) {
                     if (schemaStream != null) {
-                        // Read bytes and convert to String for ResourceContent
                         byte[] bytes = schemaStream.readAllBytes();
                         String jsonContent = new String(bytes, StandardCharsets.UTF_8);
-
-                        // Create ResourceContent with NULL type (defaults to JSON)
                         ResourceContent resource = new ResourceContent(jsonContent, null);
-
-                        // Parse into the AST
-                        StructuredDocument doc = parseContent(resource);
-
-                        // Register the root node so $ref to the public URI works instantly
-                        nodeCache.put(publicUri, doc.getRoot());
+                        metaSchemaResources.put(publicUri, resource);
                     }
                 }
             }
         } catch (IOException e) {
             throw new SchemaException("Failed to initialize built-in meta-schemas", e, propsPath);
         }
+
+        // 2. Temporarily swap the content loader for one that only loads cached meta schemas
+        ContentLoader realLoader = contentLoaderService;
+        contentLoaderService = new ContentLoader() {
+            @Override
+            public ResourceContent getContent(URI uri) throws IOException {
+                return metaSchemaResources.get(uri);
+            }
+        };
+
+        // 3. Compile and cache the meta schemas
+        for (URI metaSchemaUri : metaSchemaResources.keySet()) {
+            getSchema(metaSchemaUri);
+        }
+
+        // 4. Restore the real content loader
+        contentLoaderService = realLoader;
     }
 }

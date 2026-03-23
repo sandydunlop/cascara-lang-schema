@@ -105,7 +105,7 @@ public class SimpleEntityTests {
 
         SchemaNode children = schema.getRoot().getProperties().get("children");
         ArraySchemaNode arr = (ArraySchemaNode) children;
-        SchemaNode itemSchema = arr.getItemTemplate();
+        SchemaNode itemSchema = arr.getItemSchema();
         if (itemSchema instanceof LazySchemaNode lazy) {
             itemSchema = lazy.getResolved();
         }

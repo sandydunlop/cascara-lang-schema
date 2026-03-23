@@ -13,7 +13,7 @@ public class ArraySchemaNode extends BaseSchemaNode {
         super(name, SchemaType.ARRAY);
     }
 
-    public SchemaNode getItemTemplate() {
+    public SchemaNode getItemSchema() {
         return items;
     }
 

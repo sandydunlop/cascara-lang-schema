@@ -50,6 +50,8 @@ public final class SchemaNodeToPlain {
             for (var entry : node.getDefinitions().entrySet()) {
                 defs.put(entry.getKey(), toPlain(entry.getValue(), false));
             }
+
+            // TODO: This should probably be "$defs"
             map.put("definitions", defs);
         }
 
@@ -60,7 +62,7 @@ public final class SchemaNodeToPlain {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("type", "array");
 
-        SchemaNode item = node.getItemTemplate();
+        SchemaNode item = node.getItemSchema();
         if (item != null) {
             map.put("items", toPlain(item, false));
         }

@@ -9,12 +9,14 @@ public class SchemaException extends RuntimeException implements LocatableExcept
     private int line = -1;
     private int column = -1;
     private URI uri;
+    private final String rawMessage;
 
     /**
      * Standard constructor for logical schema errors.
      */
     public SchemaException(String message, String schemaPath) {
         super(message + " (at " + schemaPath + ")");
+        this.rawMessage = message;
         this.schemaPath = schemaPath;
     }
 
@@ -25,6 +27,7 @@ public class SchemaException extends RuntimeException implements LocatableExcept
     public SchemaException(String message, Throwable cause, String schemaPath) {
         super(message + (schemaPath != null ? " (at " + schemaPath + ")" : ""), cause);
         this.schemaPath = schemaPath != null ? schemaPath : "unknown";
+        this.rawMessage = message;
 
         if (cause instanceof LocatableException loc) {
             this.line = loc.getLine();
@@ -37,4 +40,5 @@ public class SchemaException extends RuntimeException implements LocatableExcept
     @Override public int getColumn() { return column; }
     @Override public URI getUri() { return uri; }
     public String getSchemaPath() { return schemaPath; }
+    public String getRawMessage() { return rawMessage; }
 }

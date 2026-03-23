@@ -23,7 +23,7 @@ public interface SchemaNode extends AstNode {
     Map<String, SchemaNode> getProperties();
 
     // For ARRAY types
-    SchemaNode getItemTemplate();
+    SchemaNode getItemSchema();
 
     // Definitions & Refs
     boolean isRef();

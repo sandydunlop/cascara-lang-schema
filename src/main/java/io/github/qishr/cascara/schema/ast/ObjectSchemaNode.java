@@ -27,7 +27,7 @@ public class ObjectSchemaNode extends BaseSchemaNode {
     }
 
     @Override
-    public SchemaNode getItemTemplate() { return null; }
+    public SchemaNode getItemSchema() { return null; }
 
     @Override
     public void validate(AstNode node, String path, ValidationResult result) {

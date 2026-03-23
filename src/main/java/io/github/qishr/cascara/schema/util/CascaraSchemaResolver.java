@@ -24,6 +24,9 @@ import io.github.qishr.cascara.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.schema.api.SchemaParser;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.api.TypeAnalyzer;
+import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
+import io.github.qishr.cascara.schema.ast.BaseSchemaNode;
+import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
 import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
 
@@ -73,12 +76,16 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
     @Override
     public CompiledSchema getSchema(URI uri) throws SchemaException {
+        System.out.println("SchemaResolver.getSchema: " + uri);
+
         CompiledSchema schema = schemaCache.get(uri);
         if (schema != null) return schema;
 
+        System.out.println("SchemaResolver.getSchema: nto found in cache. Calling getOrLoadAst.");
+
         // 1. Load the document (this handles content fetching and parsing)
         // We cast to StructuredDocument because that's what parseContent returns
-        StructuredDocument doc = (StructuredDocument) getOrLoadAst(uri);
+        StructuredDocument doc = (StructuredDocument)getOrLoadAst(uri);
 
         // 2. Compile using the standard interface method
         SchemaCompiler compiler = new CascaraSchemaCompiler(this);
@@ -119,29 +126,29 @@ public class CascaraSchemaResolver implements SchemaResolver {
                         targetAst = rootAst;
                     }
                 }
-            else {
-                // Different document
-                CompiledSchema externalSchema = getSchema(docUri);
-                AstNode root = externalSchema.getRoot().getOriginAst();
-                if (fragment != null && !fragment.isEmpty()) {
-                    if (fragment.startsWith("/")) {
-                        // It's a JSON Pointer: resolve against the root we just got
-                        targetAst = resolveFragment(fragment, root);
-                    } else {
-                        // It's a plain anchor (#item)
-                        // Check the nodeCache. If it's null, the compiler either
-                        // skipped registration or used a different URI key.
-                        targetAst = nodeCache.get(targetUri);
+                else {
+                    // Different document
+                    CompiledSchema externalSchema = getSchema(docUri);
+                    AstNode root = externalSchema.getRoot().getOriginAst();
+                    if (fragment != null && !fragment.isEmpty()) {
+                        if (fragment.startsWith("/")) {
+                            // It's a JSON Pointer: resolve against the root we just got
+                            targetAst = resolveFragment(fragment, root);
+                        } else {
+                            // It's a plain anchor (#item)
+                            // Check the nodeCache. If it's null, the compiler either
+                            // skipped registration or used a different URI key.
+                            targetAst = nodeCache.get(targetUri);
 
-                        // Fallback: If the cache missed, we can try to find it in the root
-                        if (targetAst == null) {
-                            targetAst = findNodeByAnchor(root, fragment);
+                            // Fallback: If the cache missed, we can try to find it in the root
+                            if (targetAst == null) {
+                                targetAst = findNodeByAnchor(root, fragment);
+                            }
                         }
+                    } else {
+                        targetAst = root;
                     }
-                } else {
-                    targetAst = root;
                 }
-            }
             }
 
             if (targetAst == null) {
@@ -151,6 +158,17 @@ public class CascaraSchemaResolver implements SchemaResolver {
             if (targetAst instanceof StructuredDocument structuredDoc) {
                 return compiler.compile(structuredDoc, docUri).getRoot();
             } else if (targetAst instanceof MapAstNode map) {
+                // CompiledSchema fullSchema = getSchema(docUri);
+                // if (fullSchema != null) {
+                //     // Search the already-compiled tree for the node matching this AST
+                //     SchemaNode existingNode = findNodeByAst(fullSchema.getRoot(), map);
+                //     if (existingNode != null) {
+                //         return existingNode;
+                //     }
+                // }
+
+                // Fallback only if the document hasn't been compiled yet
+                // (though getSchema usually triggers compilation)
                 return compiler.compileSubSchema(map, docUri);
             }
 
@@ -160,6 +178,42 @@ public class CascaraSchemaResolver implements SchemaResolver {
             if (e instanceof SchemaException se) throw se;
             throw new SchemaException("Resolution failed: " + e.getMessage(), e, ref);
         }
+    }
+
+    private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst) {
+        if (root == null || targetAst == null) return null;
+
+        // 1. Check if this is the node we're looking for
+        if (root instanceof BaseSchemaNode base && base.getOriginAst() == targetAst) {
+            return root;
+        }
+
+        // 2. Search Properties if it's an Object
+        if (root instanceof ObjectSchemaNode obj) {
+            for (SchemaNode prop : obj.getProperties().values()) {
+                SchemaNode found = findNodeByAst(prop, targetAst);
+                if (found != null) return found;
+            }
+            // Also check definitions!
+            for (SchemaNode def : obj.getDefinitions().values()) {
+                SchemaNode found = findNodeByAst(def, targetAst);
+                if (found != null) return found;
+            }
+        }
+
+        // 3. Search Item Template if it's an Array
+        if (root instanceof ArraySchemaNode arr) {
+            SchemaNode found = findNodeByAst(arr.getItemSchema(), targetAst);
+            if (found != null) return found;
+        }
+
+        // 4. Search Composition (allOf, anyOf, oneOf)
+        for (SchemaNode sub : root.getAllOf()) {
+            SchemaNode found = findNodeByAst(sub, targetAst);
+            if (found != null) return found;
+        }
+
+        return null;
     }
 
     private AstNode findNodeByAnchor(AstNode root, String anchor) {
@@ -213,9 +267,23 @@ public class CascaraSchemaResolver implements SchemaResolver {
     //
 
     private AstNode getOrLoadAst(URI docUri) {
+        System.out.println("SchemaResolver.getOrLoadAst: " + docUri);
+
         // Check nodeCache first (which stores both documents and anchors)
         AstNode existing = nodeCache.get(docUri);
         if (existing != null) return existing;
+
+        // 2. STOPS THE LOOP:
+        // If it's a cascara URI and it's not in the cache, it's a bug in the
+        // bootstrap/compilation order. Do NOT ask the ContentLoader.
+        if ("cascara".equals(docUri.getScheme())) {
+            throw new SchemaException(
+                "Internal schema not found in Resolver cache. " +
+                "Ensure the schema is registered before resolution.", docUri.toString()
+            );
+        }
+
+        System.out.println("SchemaResolver.getOrLoadAst: Not found in cache. calling contentLoaderService.getContent: " + docUri);
 
         try {
             ResourceContent content = contentLoaderService.getContent(docUri);
@@ -268,7 +336,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
     }
 
     private StructuredDocument parseContent(ResourceContent res) {
-        if (res.contentType() == null || res.contentType().getCanonicalId().contains("json")) {
+        if (res.contentType() == null || res.contentType().getId().contains("json")) {
             JsonParser parser = new JsonParser();
             return parser.parse(res.content());
         } else {

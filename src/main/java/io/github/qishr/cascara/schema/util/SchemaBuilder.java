@@ -31,13 +31,18 @@ public class SchemaBuilder {
         CompiledSchema compiledSchema;
         SimpleMapNode definitions = new SimpleMapNode();
         syntheticRoot = new SimpleMapNode();
+
+        // TODO: This should probably be "$defs"
         syntheticRoot.put("definitions", definitions);
+
         syntheticRoot.put("$id", new SimpleScalarNode(originUri));
         syntheticRoot.put("name", new SimpleScalarNode(name));
 
         for (Class<?> cls : classes) {
             // Give the generator the synthentic root AST and
             // tell it where generated definitions go within it.
+
+            // TODO: This should probably be "#/$defs"
             generator.generate(syntheticRoot, "#/definitions", cls);
         }
 

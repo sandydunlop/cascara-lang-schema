@@ -114,6 +114,6 @@ public final class SchemaDiffDiagnostic {
     }
 
     private static void diffArray(SchemaNode a, SchemaNode b, String path, List<String> out) {
-        diffNode(a.getItemTemplate(), b.getItemTemplate(), path + "/items", false, out);
+        diffNode(a.getItemSchema(), b.getItemSchema(), path + "/items", false, out);
     }
 }

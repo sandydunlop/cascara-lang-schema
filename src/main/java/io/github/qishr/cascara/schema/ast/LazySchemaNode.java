@@ -121,7 +121,7 @@ public class LazySchemaNode extends BaseSchemaNode {
     @Override public String getName() { return getResolved().getName(); }
     @Override public SchemaNode getProperty(String key) { return getResolved().getProperty(key); }
     @Override public Map<String, SchemaNode> getProperties() { return getResolved().getProperties(); }
-    @Override public SchemaNode getItemTemplate() { return getResolved().getItemTemplate(); }
+    @Override public SchemaNode getItemSchema() { return getResolved().getItemSchema(); }
     @Override public boolean isRef() { return true; }
     @Override public String getRef() { return this.ref; }
     @Override public List<ValidationRule> getRules() { return getResolved().getRules(); }

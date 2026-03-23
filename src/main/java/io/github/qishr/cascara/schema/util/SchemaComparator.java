@@ -58,6 +58,6 @@ public final class SchemaComparator {
     }
 
     private static boolean compareArrays(SchemaNode a, SchemaNode b) {
-        return equals(a.getItemTemplate(), b.getItemTemplate());
+        return equals(a.getItemSchema(), b.getItemSchema());
     }
 }

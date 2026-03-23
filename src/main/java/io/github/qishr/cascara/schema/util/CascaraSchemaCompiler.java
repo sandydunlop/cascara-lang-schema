@@ -114,24 +114,48 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     }
 
     @Override
-    public SchemaNode compileSubSchema(@SuppressWarnings("rawtypes") MapAstNode node, URI originUri) {
-        SchemaNode rootContext = null;
+    // public SchemaNode compileSubSchema(@SuppressWarnings("rawtypes") MapAstNode node, URI originUri) {
+    //     SchemaNode rootContext = null;
 
-        // Check if we can safely ask the resolver without recursing.
-        // If we're already in the middle of a resolve/compile for this URI,
-        // we should skip the resolver lookup.
+    //     // Check if we can safely ask the resolver without recursing.
+    //     // If we're already in the middle of a resolve/compile for this URI,
+    //     // we should skip the resolver lookup.
+    //     try {
+    //         // Only ask the resolver if we aren't currently "inside"
+    //         // a resolution for this specific originUri.
+    //         CompiledSchema existing = resolver.getSchema(originUri);
+    //         if (existing != null) {
+    //             rootContext = existing.getRoot();
+    //         }
+    //     } catch (Exception ignored) {}
+
+    //     if (rootContext == null) {
+    //         // Fallback to a virtual root to prevent the NULL ROOT crash
+    //         // but avoid triggering a new compilation.
+    //         rootContext = new ObjectSchemaNode("fragment-root");
+    //         ((BaseSchemaNode) rootContext).setOriginUri(originUri);
+    //     }
+
+    //     String name = node.getString(NAME);
+    //     if (name == null) name = FRAGMENT;
+
+    //     // return processNode(node, name, originUri, rootContext);
+    //     // TODO: originUri the same as the fragment's URI?!
+    //     return processNode(node, name, originUri, originUri, rootContext);
+    // }
+
+    public SchemaNode compileSubSchema(MapAstNode node, URI originUri) {
+        SchemaNode rootContext = null;
         try {
-            // Only ask the resolver if we aren't currently "inside"
-            // a resolution for this specific originUri.
             CompiledSchema existing = resolver.getSchema(originUri);
             if (existing != null) {
                 rootContext = existing.getRoot();
             }
         } catch (Exception ignored) {}
 
+        // FIX: If we found the real root, use it!
+        // Don't just settle for fragment-root if originUri matches an existing schema.
         if (rootContext == null) {
-            // Fallback to a virtual root to prevent the NULL ROOT crash
-            // but avoid triggering a new compilation.
             rootContext = new ObjectSchemaNode("fragment-root");
             ((BaseSchemaNode) rootContext).setOriginUri(originUri);
         }
@@ -139,136 +163,8 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         String name = node.getString(NAME);
         if (name == null) name = FRAGMENT;
 
-        // return processNode(node, name, originUri, rootContext);
-        // TODO: originUri the same as the fragment's URI?!
         return processNode(node, name, originUri, originUri, rootContext);
     }
-
-    // @SuppressWarnings({ "unchecked", "rawtypes" })
-    // private SchemaNode processNode(MapAstNode astNode, String name, URI originUri, SchemaNode rootSchema) {
-    //     String refValue = astNode.getString(SchemaKeyword.REF.string());
-    //     BaseSchemaNode schemaNode;
-
-    //     if (refValue != null && !refValue.isEmpty()) {
-    //         // Unified: Every pointer is a LazySchemaNode
-    //         schemaNode = new LazySchemaNode(refValue, resolver, rootSchema, originUri);
-    //     } else {
-    //         // Standard Factory
-    //         SchemaType type = extractType(astNode);
-    //         schemaNode = switch (type) {
-    //             case OBJECT -> new ObjectSchemaNode(name);
-    //             case ARRAY  -> new ArraySchemaNode(name);
-    //             default     -> new ScalarSchemaNode(name, type);
-    //         };
-    //     }
-
-    //     // --- Uniform Metadata & Extensions ---
-    //     schemaNode.setOriginAst(astNode);
-    //     schemaNode.setOriginUri(originUri);
-    //     schemaNode.setTitle(astNode.getString(SchemaKeyword.TITLE.string()));
-    //     schemaNode.setDescription(astNode.getString(SchemaKeyword.DESCRIPTION.string()));
-
-
-    //     // Handle $anchor (Draft 2020-12)
-    //     String anchor = astNode.getString(SchemaKeyword.ANCHOR.string());
-
-    //     if (anchor != null && !anchor.isEmpty()) {
-    //         // 2. Resolve the anchor fragment against the current document's URI
-    //         // e.g., "cascara://core/entities.yaml" + "#item"
-    //         URI anchorUri = originUri.resolve("#" + anchor);
-
-    //         // 3. Register it in the resolver's nodeCache
-    //         resolver.registerAnchor(anchorUri, astNode);
-    //     }
-
-    //     // Handle Compositions
-    //     SchemaNode effectiveRoot = (rootSchema == null) ? schemaNode : rootSchema;
-    //     processComposition(astNode, SchemaKeyword.ALL_OF, schemaNode, originUri, effectiveRoot);
-    //     processComposition(astNode, SchemaKeyword.ANY_OF, schemaNode, originUri, effectiveRoot);
-    //     processComposition(astNode, SchemaKeyword.ONE_OF, schemaNode, originUri, effectiveRoot);
-
-    //     // Handle Internal Definitions (Draft 4-7 'definitions' and Draft 2019+ '$defs')
-    //     AstNode defsNode = astNode.get(SchemaKeyword.DEFINITIONS.string());
-    //     if (defsNode == null) {
-    //         // Fallback to modern keyword
-    //         defsNode = astNode.get(SchemaKeyword.DEFS.string());
-    //     }
-
-    //     // Handle Internal Definitions
-    //     if (defsNode instanceof MapAstNode defs) {
-    //         defs.getEntries().forEach((entry) -> {
-    //             if (entry instanceof MapEntryAstNode entryNode &&
-    //                     entryNode.getValue() instanceof MapAstNode m &&
-    //                     entryNode.getKey() instanceof ScalarAstNode scalar) {
-    //                 String key = scalar.getString();
-    //                 SchemaNode defNode = processNode(m, key, originUri, effectiveRoot);
-    //                 if (effectiveRoot instanceof ObjectSchemaNode objRoot) {
-    //                     objRoot.addDefinition(key, defNode);
-    //                 }
-    //             }
-    //         });
-    //     }
-
-    //     // Structural Logic
-
-    //     if (schemaNode instanceof ObjectSchemaNode objNode) {
-    //         // Handle additionalProperties
-    //         AstNode addProps = astNode.get(SchemaKeyword.ADDITIONAL_PROPERTIES.string());
-    //         if (addProps instanceof ScalarAstNode scalar && scalar.getPrimitiveValue() instanceof Boolean b) {
-    //             objNode.setAdditionalPropertiesAllowed(b);
-    //         }
-
-    //         // Handle unevaluatedProperties
-    //         AstNode unevProps = astNode.get(SchemaKeyword.UNEVALUATED_PROPERTIES.string());
-    //         if (unevProps instanceof ScalarAstNode scalar && scalar.getPrimitiveValue() instanceof Boolean b) {
-    //             objNode.setUnevaluatedPropertiesAllowed(b);
-    //         }
-
-    //         // TODO: Handle the case where additionalProperties is a sub-schema
-
-    //         if (astNode.get(SchemaKeyword.PROPERTIES.string()) instanceof MapAstNode props) {
-    //             props.getEntries().forEach((entry) -> {
-    //                 if (entry instanceof MapEntryAstNode entryNode &&
-    //                         entryNode.getKey() instanceof ScalarAstNode scalar &&
-    //                         entryNode.getValue() instanceof MapAstNode m) {
-    //                     String propName = scalar.getString();
-    //                     objNode.addProperty(propName, processNode(m, propName, originUri, effectiveRoot));
-    //                 }
-    //             });
-    //         }
-    //     }
-    //     else if (schemaNode instanceof ArraySchemaNode arrNode) {
-    //         AstNode itemsAst = astNode.get(SchemaKeyword.ITEMS.string());
-    //         if (itemsAst instanceof MapAstNode itemsMap) {
-    //             arrNode.setItemTemplate(processNode(itemsMap, ITEM, originUri, effectiveRoot));
-    //         }
-    //     }
-
-    //     attachRules(astNode, schemaNode);
-
-    //     // Capture ALL extension keywords (x-load, x-storage, x-cascade, etc.)
-    //     astNode.getEntries().forEach((entry) -> {
-    //         if (entry instanceof MapEntryAstNode node) {
-    //             AstNode keyBase = node.getKey();
-    //             if (keyBase instanceof ScalarAstNode keyNode) {
-    //                 String key = keyNode.getString();
-    //                 if (!SchemaKeyword.exists(key)) { // it's not a standard JSONSchema keyword
-    //                     AstNode valBase = node.getValue();
-
-    //                     if (valBase instanceof ScalarAstNode valNode) {
-    //                         // Handle simple hints (x-tracked: true)
-    //                         schemaNode.setExtension(key, valNode.getPrimitiveValue());
-    //                     } else if (valBase instanceof MapAstNode mapNode) {
-    //                         // Handle complex hints (x-indexed: { name: "...", unique: true })
-    //                         schemaNode.setExtension(key, convertToMap(mapNode));
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     });
-
-    //     return schemaNode;
-    // }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private SchemaNode processNode(MapAstNode astNode, String name, URI originUri, URI logicalBaseUri, SchemaNode rootSchema) {

@@ -39,7 +39,7 @@ public final class SchemaNodeDumper {
         // Array items
         if (node.getType() == SchemaType.ARRAY) {
             indent(sb, indent + 1).append("items:\n");
-            dump(node.getItemTemplate(), sb, indent + 2);
+            dump(node.getItemSchema(), sb, indent + 2);
         }
 
         // Rules

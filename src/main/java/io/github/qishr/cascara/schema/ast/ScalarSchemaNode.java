@@ -18,7 +18,7 @@ public class ScalarSchemaNode extends BaseSchemaNode {
     }
 
     @Override
-    public SchemaNode getItemTemplate() {
+    public SchemaNode getItemSchema() {
         // Scalars are not collections
         return null;
     }

@@ -27,11 +27,11 @@ public final class CascaraSchemaDecompiler {
     private static final String OBJECT = "object";
 
     // Standard JSON Schema Keywords
+    private static final String DEFS = "$defs";
     private static final String ID = "$id";
     private static final String REF = "$ref";
     private static final String SCHEMA = "$schema";
     private static final String DEFAULT = "default";
-    private static final String DEFINITIONS = "definitions";
     private static final String DESCRIPTION = "description";
     private static final String ITEMS = "items";
     private static final String PROPERTIES = "properties";
@@ -114,7 +114,7 @@ public final class CascaraSchemaDecompiler {
             for (var e : object.getDefinitions().entrySet()) {
                 definitions.put(e.getKey(), decompileInternal(e.getValue()));
             }
-            map.put(DEFINITIONS, definitions);
+            map.put(DEFS, definitions);
         }
 
         // properties
@@ -141,7 +141,7 @@ public final class CascaraSchemaDecompiler {
         SimpleMapNode items = new SimpleMapNode();
         map.put(TYPE, scalarValue(ARRAY));
 
-        SchemaNode template = array.getItemTemplate();
+        SchemaNode template = array.getItemSchema();
         if (template instanceof LazySchemaNode lazy) {
             if (lazy.getRef() == null || lazy.getRef().isEmpty()) {
                 throw new SchemaException("Missing $ref: ", array.getName());

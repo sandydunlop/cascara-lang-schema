@@ -84,9 +84,9 @@ public class SchemaUtils {
         }
 
         // 6. Recurse into Template (ARRAY)
-        else if (node.getType() == SchemaType.ARRAY && node.getItemTemplate() != null) {
+        else if (node.getType() == SchemaType.ARRAY && node.getItemSchema() != null) {
             sb.append(indentation).append("  Items:\n");
-            generateText(node.getItemTemplate(), sb, indent + 1, visited);
+            generateText(node.getItemSchema(), sb, indent + 1, visited);
         }
     }
 

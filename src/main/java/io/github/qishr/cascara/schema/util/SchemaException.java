@@ -15,9 +15,33 @@ public class SchemaException extends RuntimeException implements LocatableExcept
      * Standard constructor for logical schema errors.
      */
     public SchemaException(String message, String schemaPath) {
-        super(message + " (at " + schemaPath + ")");
+        super(message + " for " + schemaPath);
         this.rawMessage = message;
         this.schemaPath = schemaPath;
+    }
+
+    public SchemaException(String message, String schemaPath, URI uri) {
+        super(message + String.format(" for %s (at %s)", schemaPath, uri));
+        this.schemaPath = schemaPath;
+        this.rawMessage = message;
+    }
+
+    public SchemaException(String message, String schemaPath, int line, int column, URI uri) {
+        super(message + String.format(" for %s (at %s:%d)", schemaPath, uri, line));
+        this.schemaPath = schemaPath;
+        this.rawMessage = message;
+        this.line = line;
+        this.column = column;
+        this.uri = uri;
+    }
+
+    public SchemaException(String message, int line, int column, URI uri) {
+        super(message + String.format(" (at %s:%d)", uri, line));
+        this.schemaPath = null;
+        this.rawMessage = message;
+        this.line = line;
+        this.column = column;
+        this.uri = uri;
     }
 
     /**

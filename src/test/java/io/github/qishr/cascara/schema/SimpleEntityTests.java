@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
-import io.github.qishr.cascara.schema.annotation.SchemaField;
+import io.github.qishr.cascara.schema.annotation.SchemaProperty;
 import io.github.qishr.cascara.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.LazySchemaNode;
@@ -70,7 +70,7 @@ public class SimpleEntityTests {
 
 
     public class IgnoreEntity {
-        @SchemaField(title = "Visible")
+        @SchemaProperty(title = "Visible")
         String visible;
 
         @DataIgnore

@@ -31,26 +31,53 @@ import io.github.qishr.cascara.common.content.ResourceContent;
 
 public class BasedTests extends SchemaIntegrationTestBase {
 
+    // @Test
+    // void testLazyNodeTriggeringResolution() throws SchemaException {
+    //     CascaraSchemaResolver mockResolver = mock(CascaraSchemaResolver.class);
+    //     URI baseUri = URI.create("https://myserver.com/schema.json");
+
+    //     // 1. Create a dummy node to be returned
+    //     SchemaNode expectedNode = new ScalarSchemaNode("common", SchemaType.STRING);
+
+    //     // 2. Setup the Lazy node
+    //     LazySchemaNode lazy = new LazySchemaNode("common.json", mockResolver, null, baseUri);
+
+    //     // 3. THE FIX: Stub the resolver to return the dummy node
+    //     when(mockResolver.resolve(eq("common.json"), eq(lazy))).thenReturn(expectedNode);
+
+    //     // 4. Trigger resolution
+    //     SchemaNode resolved = lazy.getResolved();
+
+    //     // 5. Verify the call and the result
+    //     verify(mockResolver).resolve(eq("common.json"), eq(lazy));
+    //     assertEquals(expectedNode, resolved, "Lazy node should return the node provided by the resolver");
+    // }
     @Test
     void testLazyNodeTriggeringResolution() throws SchemaException {
         CascaraSchemaResolver mockResolver = mock(CascaraSchemaResolver.class);
+        // Add a mock for the AST identity
+        AstNode mockAst = mock(AstNode.class);
         URI baseUri = URI.create("https://myserver.com/schema.json");
 
         // 1. Create a dummy node to be returned
         SchemaNode expectedNode = new ScalarSchemaNode("common", SchemaType.STRING);
 
-        // 2. Setup the Lazy node
-        LazySchemaNode lazy = new LazySchemaNode("common.json", mockResolver, null, baseUri);
+        // 2. Setup the Lazy node with the new originAst parameter
+        LazySchemaNode lazy = new LazySchemaNode("common.json", mockResolver, null, baseUri, mockAst);
 
-        // 3. THE FIX: Stub the resolver to return the dummy node
+        // 3. Stub the resolver
         when(mockResolver.resolve(eq("common.json"), eq(lazy))).thenReturn(expectedNode);
 
-        // 4. Trigger resolution
+        // 4. Trigger resolution via getResolved()
         SchemaNode resolved = lazy.getResolved();
 
-        // 5. Verify the call and the result
+        // 5. Verify the result and that getOriginAst now delegates to the resolved node
         verify(mockResolver).resolve(eq("common.json"), eq(lazy));
-        assertEquals(expectedNode, resolved, "Lazy node should return the node provided by the resolver");
+        assertEquals(expectedNode, resolved);
+
+        // This is the critical check for your fix:
+        // Once resolved, it should return the expectedNode's AST, not the mockAst
+        assertEquals(expectedNode.getOriginAst(), lazy.getOriginAst());
     }
 
     @Test

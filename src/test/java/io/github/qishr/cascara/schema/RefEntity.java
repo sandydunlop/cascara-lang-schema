@@ -2,12 +2,12 @@ package io.github.qishr.cascara.schema;
 
 import java.util.List;
 
-import io.github.qishr.cascara.schema.annotation.SchemaField;
+import io.github.qishr.cascara.schema.annotation.SchemaProperty;
 
 public class RefEntity {
-    @SchemaField(title = "Child")
+    @SchemaProperty(title = "Child")
     SimpleEntity child;
 
-    @SchemaField(title = "Children")
+    @SchemaProperty(title = "Children")
     List<RefEntity> children;
 }

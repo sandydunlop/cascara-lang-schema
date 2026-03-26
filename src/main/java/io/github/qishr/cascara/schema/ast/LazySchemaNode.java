@@ -16,8 +16,9 @@ public class LazySchemaNode extends BaseSchemaNode {
     private final SchemaResolver resolver;
     private SchemaNode resolvedNode;
     private SchemaNode root;
+    private AstNode initialAst;
 
-    public LazySchemaNode(String ref, SchemaResolver resolver, SchemaNode root, URI originUri) {
+    public LazySchemaNode(String ref, SchemaResolver resolver, SchemaNode root, URI originUri, AstNode originAst) {
         super(ref, null);
         // if (root == null) {
         //     throw new SchemaException("BUG: NULL ROOT", ref);
@@ -26,6 +27,7 @@ public class LazySchemaNode extends BaseSchemaNode {
         this.resolver = resolver;
         this.root = root;
         this.originUri = originUri;
+        this.initialAst = originAst;
     }
 
     public void setRoot(SchemaNode root) {
@@ -36,13 +38,23 @@ public class LazySchemaNode extends BaseSchemaNode {
         return root;
     }
 
+    public SchemaNode peekResolved() {
+        return this.resolvedNode;
+    }
+
     public SchemaNode getResolved() throws SchemaException {
         if (resolvedNode == null) {
-            resolvedNode = resolver.resolve(ref, this);
-            if (resolvedNode == null) {
-                // Fallback or error if the resolver returned raw AST
-                // instead of a compiled schema
-                throw new SchemaException("BUG: RESOLUTION FAILED", ref);
+            System.out.println("Lazy node resolving: " + ref);
+            // Perform the initial resolution (e.g., looking up the $ref)
+            SchemaNode result = resolver.resolve(ref, this);
+            // If the result is itself another Lazy node, resolve it immediately.
+            while (result instanceof LazySchemaNode lazy) {
+                result = lazy.getResolved();
+            }
+            this.resolvedNode = result;
+            if (result == null) {
+                resolver.resolve(ref, this);
+                throw new SchemaException("Resolution failed", ref, getStartLine(), getStartColumn(), getOriginUri());
             }
         }
         return resolvedNode;
@@ -70,41 +82,14 @@ public class LazySchemaNode extends BaseSchemaNode {
         }
     }
 
-    // @Override
-    // public AstNode getOriginAst() {
-    //     // If we haven't resolved yet, we fall back to the root's origin
-    //     // to give the resolver context.
-    //     return (resolvedNode != null) ? resolvedNode.getOriginAst() : root.getOriginAst();
-    // }
+    public AstNode getInitialAst() {
+        return initialAst;
+    }
 
     @Override
     public AstNode getOriginAst() {
-        if (resolvedNode != null) {
-            return resolvedNode.getOriginAst();
-        }
-
-        // Break the infinite recursion:
-        // Only ask the root if the root isn't US.
-        if (root != null && root != this) {
-
-
-
-            // The resolver gets "relativeTo.getOriginAst();" where relativeTo is the lazy node.
-            // The lazy node in question has a root, but the root has no originAst.
-            // Surely in this case the root is the origin.
-            // if (root.getOriginAst() == null) {
-            //     return root;
-            // }
-            // That is not right - we need the war AST, not the compiled schema (which root is)
-
-
-
-            return root.getOriginAst();
-        }
-
-        // Fallback: If we are the root or have no root, we have no
-        // parent AST to provide context yet.
-        return null;
+        // Once resolved, we delegate to follow the 'Proxy' requirement
+        return (resolvedNode != null) ? resolvedNode.getOriginAst() : initialAst;
     }
 
     public SchemaType getType() {
@@ -126,6 +111,7 @@ public class LazySchemaNode extends BaseSchemaNode {
     @Override public String getDescription() { return getResolved().getDescription(); }
     @Override public Map<String, SchemaNode> getDefinitions() { return getResolved().getDefinitions(); }
     @Override public Object getDefaultValue() { return getResolved().getDefaultValue(); }
+    @Override public String getContentMediaType() { return getResolved().getContentMediaType(); }
 
     @Override
     public String getFormat() {

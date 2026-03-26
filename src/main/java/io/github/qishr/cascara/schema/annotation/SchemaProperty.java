@@ -6,8 +6,9 @@ import java.lang.annotation.Target;
 import java.lang.annotation.ElementType;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface SchemaObject {
+@Target(ElementType.FIELD)
+public @interface SchemaProperty {
     String title() default "";
     String description() default "";
+    boolean required() default false;
 }

@@ -5,7 +5,6 @@ import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import io.github.qishr.cascara.common.diagnostic.Reporter;
 import io.github.qishr.cascara.common.diagnostic.SimpleReporter;
@@ -128,7 +127,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         BaseSchemaNode schemaNode;
 
         if (refValue != null && !refValue.isEmpty()) {
-            schemaNode = new LazySchemaNode(refValue, resolver, rootSchema, currentBase);
+            schemaNode = new LazySchemaNode(refValue, resolver, rootSchema, currentBase, astNode);
         } else {
             SchemaType type = extractType(astNode);
             schemaNode = switch (type) {
@@ -153,10 +152,10 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         schemaNode.setOriginUri(originUri);
         schemaNode.setTitle(astNode.getString(SchemaKeyword.TITLE.string()));
         schemaNode.setDescription(astNode.getString(SchemaKeyword.DESCRIPTION.string()));
+        schemaNode.setContentMediaType(astNode.getString(SchemaKeyword.CONTENT_MEDIA_TYPE.string()));
 
         SchemaNode effectiveRoot = (rootSchema == null) ? schemaNode : rootSchema;
 
-        // --- RESTORED: Object-Specific Logic ---
         if (schemaNode instanceof ObjectSchemaNode objNode) {
             // additionalProperties
             AstNode addProps = astNode.get(SchemaKeyword.ADDITIONAL_PROPERTIES.string());

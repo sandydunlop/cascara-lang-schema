@@ -39,7 +39,8 @@ public interface SchemaNode extends AstNode {
     void validate(AstNode node, String path, ValidationResult result);
     AstNode getOriginAst();
 
-
+    String getContentMediaType();
+    void setContentMediaType(String contentMediaType);
 
 
 

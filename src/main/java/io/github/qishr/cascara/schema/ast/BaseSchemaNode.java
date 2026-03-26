@@ -29,6 +29,8 @@ public abstract class BaseSchemaNode implements SchemaNode {
     private final Map<String, String> formatOptions = new HashMap<>();
     private boolean readOnly = false; // Default to false
     private final java.util.Map<String, Object> extensions = new java.util.HashMap<>();
+    private String contentMediaType;
+
 
     private final List<SchemaNode> allOf = new ArrayList<>();
     // TODO:
@@ -64,6 +66,14 @@ public abstract class BaseSchemaNode implements SchemaNode {
     public void setDescription(String description) { this.description = description; }
     public void setRef(String ref) { this.ref = ref; }
     public void setDefaultValue(Object defaultValue) { this.defaultValue = defaultValue; }
+
+    public String getContentMediaType() {
+        return contentMediaType;
+    }
+
+    public void setContentMediaType(String contentMediaType) {
+        this.contentMediaType = contentMediaType;
+    }
 
     //
     //

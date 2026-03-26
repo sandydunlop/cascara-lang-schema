@@ -4,10 +4,11 @@ import io.github.qishr.cascara.common.lang.annotation.DataField;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.simple.*;
-import io.github.qishr.cascara.schema.annotation.SchemaField;
-import io.github.qishr.cascara.schema.annotation.SchemaObject;
+import io.github.qishr.cascara.schema.annotation.SchemaProperty;
+import io.github.qishr.cascara.schema.SchemaKeyword;
+import io.github.qishr.cascara.schema.annotation.ContentMediaType;
+import io.github.qishr.cascara.schema.annotation.SchemaDefinition;
 import io.github.qishr.cascara.schema.api.TypeAnalyzer;
-import io.github.qishr.cascara.schema.constraint.FileConstraint;
 import io.github.qishr.cascara.schema.constraint.Hidden;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
@@ -89,58 +90,6 @@ public final class ClassSchemaGenerator {
         return new SimpleDocument(classRoot);
     }
 
-
-    // TODO: This is only called from a test
-    public SimpleDocument generateCombined(Class<?>... classes) {
-        // Reset state for a fresh combined schema
-        processingStack.clear();
-        definitions.clear();
-
-        SimpleMapNode root = new SimpleMapNode();
-        root.put("name", scalar("Combined"));
-        root.put("type", scalar("object"));
-
-        SimpleMapNode props = new SimpleMapNode();
-        root.put("properties", props);
-
-        for (Class<?> clazz : classes) {
-            // Generate a full schema document for the class
-            SimpleDocument doc = generate(clazz);
-            SimpleMapNode entity = (SimpleMapNode) doc.getRoot();
-
-            // Remove the "name" field so it doesn't conflict
-            entity.remove("name");
-
-            // Insert under properties using the class simple name
-            props.put(clazz.getSimpleName(), entity);
-
-            // Merge definitions from this schema into the combined schema
-            if (entity.get("definitions") instanceof SimpleMapNode defs) {
-                defs.getEntries().forEach(entry -> {
-                    if (entry instanceof SimpleMapEntryNode e &&
-                        e.getKey() instanceof SimpleScalarNode &&
-                        e.getValue() instanceof SimpleMapNode value) {
-
-                        definitions.putIfAbsent(clazz, value);
-                    }
-                });
-            }
-        }
-
-        // If we collected definitions, add them to the combined schema
-        if (!definitions.isEmpty()) {
-            SimpleMapNode defsNode = new SimpleMapNode();
-            for (Map.Entry<Class<?>, SimpleMapNode> e : definitions.entrySet()) {
-                defsNode.put(e.getKey().getSimpleName(), e.getValue());
-            }
-            root.put("definitions", defsNode);
-        }
-
-        return new SimpleDocument(root);
-    }
-
-
-
     private SimpleMapNode generateClassRoot(Class<?> clazz) {
         SimpleMapNode root = new SimpleMapNode();
         root.put("name", scalar(clazz.getSimpleName()));
@@ -170,24 +119,31 @@ public final class ClassSchemaGenerator {
     }
 
     private void fillObjectMetadata(Class<?> clazz, SimpleMapNode root) {
-        if (clazz.isAnnotationPresent(SchemaObject.class)) {
-            SchemaObject obj = clazz.getAnnotation(SchemaObject.class);
+        if (clazz.isAnnotationPresent(SchemaDefinition.class)) {
+            SchemaDefinition definition = clazz.getAnnotation(SchemaDefinition.class);
 
-            String title = obj.title().isEmpty()
+            String title = definition.title().isEmpty()
                 ? clazz.getSimpleName()
-                : obj.title();
+                : definition.title();
 
             root.put("title", scalar(title));
 
-            if (!obj.description().isEmpty()) {
-                root.put("description", scalar(obj.description()));
+            if (!definition.description().isEmpty()) {
+                root.put("description", scalar(definition.description()));
             }
+
+            if (clazz.isAnnotationPresent(ContentMediaType.class)) {
+                ContentMediaType mediaType = clazz.getAnnotation(ContentMediaType.class);
+                root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), scalar(mediaType.value()));
+            }
+
+            // TODO: TypeAnalyzers
         }
     }
 
     private boolean shouldInclude(Field field) {
         if (field.isAnnotationPresent(DataIgnore.class)) return false;
-        return field.isAnnotationPresent(SchemaField.class);
+        return field.isAnnotationPresent(SchemaProperty.class);
     }
 
     private String resolveFieldName(Field field) {
@@ -202,11 +158,16 @@ public final class ClassSchemaGenerator {
 
     private SimpleMapNode createFieldNode(Field field, Object template) {
         SimpleMapNode node = new SimpleMapNode();
-        SchemaField sf = field.getAnnotation(SchemaField.class);
+        SchemaProperty sf = field.getAnnotation(SchemaProperty.class);
         node.put("title", scalar(sf.title()));
 
         if (!sf.description().isEmpty()) {
             node.put("description", scalar(sf.description()));
+        }
+
+        if (field.isAnnotationPresent(ContentMediaType.class)) {
+            ContentMediaType mediaType = field.getAnnotation(ContentMediaType.class);
+            node.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), scalar(mediaType.value()));
         }
 
         appendDefaultValue(node, field, template);
@@ -340,18 +301,27 @@ public final class ClassSchemaGenerator {
             }
         }
 
-        if (field.isAnnotationPresent(FileConstraint.class)) {
-            FileConstraint fc = field.getAnnotation(FileConstraint.class);
 
-            node.put("format", scalar("path"));
-            node.put("absolute", scalar(fc.absolute()));
 
-            if (fc.extensions().length > 0) {
-                SimpleSequenceNode extNode = new SimpleSequenceNode();
-                for (String ext : fc.extensions()) extNode.add(scalar(ext));
-                node.put("extensions", extNode);
-            }
-        }
+
+
+        // if (field.isAnnotationPresent(FileConstraint.class)) {
+        //     FileConstraint fc = field.getAnnotation(FileConstraint.class);
+
+        //     node.put("format", scalar("path"));
+        //     node.put("absolute", scalar(fc.absolute()));
+
+        //     if (fc.extensions().length > 0) {
+        //         SimpleSequenceNode extNode = new SimpleSequenceNode();
+        //         for (String ext : fc.extensions()) extNode.add(scalar(ext));
+        //         node.put("extensions", extNode);
+        //     }
+        // }
+
+
+
+
+
 
         if (field.isAnnotationPresent(ReadOnly.class)) {
             node.put("readOnly", scalar(true));
@@ -439,6 +409,6 @@ public final class ClassSchemaGenerator {
             return false;
         }
         // Heuristic: entities with their own schema documents
-        return type.isAnnotationPresent(SchemaObject.class);
+        return type.isAnnotationPresent(SchemaDefinition.class);
     }
 }

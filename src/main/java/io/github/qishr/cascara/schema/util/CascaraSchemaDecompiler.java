@@ -9,6 +9,7 @@ import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.LazySchemaNode;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
@@ -61,9 +62,15 @@ public final class CascaraSchemaDecompiler {
     private SimpleMapNode decompileInternal(SchemaNode compiled) throws SchemaException {
         SimpleMapNode decompiled = new SimpleMapNode();
 
+        if (compiled.getContentMediaType() instanceof String mediaType) {
+            decompiled.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), scalarValue(mediaType));
+        }
+
         for (var e : standardKeywords(compiled).entrySet()) {
             decompiled.put(e.getKey(), scalarValue(e.getValue()));
         }
+
+        // TODO: There are extensions with Object values...
         for (var e : extensions(compiled).entrySet()) {
             decompiled.put(e.getKey(), scalarValue(e.getValue()));
         }

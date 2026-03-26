@@ -1,12 +1,12 @@
 package io.github.qishr.cascara.schema;
 
-import io.github.qishr.cascara.schema.annotation.SchemaField;
+import io.github.qishr.cascara.schema.annotation.SchemaProperty;
 
 public class SimpleEntity {
-    @SchemaField(title = "Name")
+    @SchemaProperty(title = "Name")
     String name;
 
-    @SchemaField(title = "Age")
+    @SchemaProperty(title = "Age")
     int age;
 }
 

@@ -1,7 +1,7 @@
 package io.github.qishr.cascara.schema.util;
 
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
-import io.github.qishr.cascara.schema.annotation.SchemaField;
+import io.github.qishr.cascara.schema.annotation.SchemaProperty;
 
 import org.junit.jupiter.api.Test;
 
@@ -13,25 +13,25 @@ import static org.junit.jupiter.api.Assertions.*;
 class ClassSchemaGeneratorTest {
 
     static class SimpleEntity {
-        @SchemaField
+        @SchemaProperty
         public String title;
 
-        @SchemaField
+        @SchemaProperty
         public int count;
 
-        @SchemaField
+        @SchemaProperty
         public boolean active;
 
-        @SchemaField
+        @SchemaProperty
         public double score;
     }
 
 
     static class NestedEntity {
-        @SchemaField
+        @SchemaProperty
         public String name;
 
-        @SchemaField
+        @SchemaProperty
         public SimpleEntity child;
     }
 
@@ -137,9 +137,9 @@ class ClassSchemaGeneratorTest {
     @Test
     void scalarFieldsGenerateScalarTypes() {
         class Simple {
-            @SchemaField public String name;
-            @SchemaField public int age;
-            @SchemaField public boolean active;
+            @SchemaProperty public String name;
+            @SchemaProperty public int age;
+            @SchemaProperty public boolean active;
         }
 
         var doc = generator.generate(Simple.class);
@@ -154,10 +154,10 @@ class ClassSchemaGeneratorTest {
     @Test
     void nestedObjectBecomesReference() {
         class Address {
-            @SchemaField public String street;
+            @SchemaProperty public String street;
         }
         class Person {
-            @SchemaField public Address address;
+            @SchemaProperty public Address address;
         }
 
         var doc = generator.generate(Person.class);
@@ -172,10 +172,10 @@ class ClassSchemaGeneratorTest {
     @Test
     void listOfObjectsBecomesArrayOfReferences() {
         class Tag {
-            @SchemaField public String name;
+            @SchemaProperty public String name;
         }
         class Entry {
-            @SchemaField public List<Tag> tags;
+            @SchemaProperty public List<Tag> tags;
         }
 
         var doc = generator.generate(Entry.class);
@@ -193,15 +193,15 @@ class ClassSchemaGeneratorTest {
     @Test
     void mixedFieldsProduceCorrectSchema() {
         class Address {
-            @SchemaField public String street;
+            @SchemaProperty public String street;
         }
         class Tag {
-            @SchemaField public String name;
+            @SchemaProperty public String name;
         }
         class Person {
-            @SchemaField public String name;
-            @SchemaField public Address address;
-            @SchemaField public List<Tag> tags;
+            @SchemaProperty public String name;
+            @SchemaProperty public Address address;
+            @SchemaProperty public List<Tag> tags;
         }
 
         var doc = generator.generate(Person.class);
@@ -227,10 +227,10 @@ class ClassSchemaGeneratorTest {
     @Test
     void nestedObjectsDoNotGeneratePropertiesBlock() {
         class Address {
-            @SchemaField public String street;
+            @SchemaProperty public String street;
         }
         class Person {
-            @SchemaField public Address address;
+            @SchemaProperty public Address address;
         }
 
         var doc = generator.generate(Person.class);

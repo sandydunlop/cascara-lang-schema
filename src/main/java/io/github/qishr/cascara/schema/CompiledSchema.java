@@ -8,6 +8,7 @@ import io.github.qishr.cascara.schema.util.SchemaException;
 
 import java.net.URI;
 import java.util.*;
+import java.util.Map.Entry;
 
 public final class CompiledSchema implements StructuredDocument {
 
@@ -29,12 +30,8 @@ public final class CompiledSchema implements StructuredDocument {
         if (properties == null) {
             properties = new LinkedHashMap<>();
             if (root != null) {
-                for (SchemaNode node : root.getProperties().values()) {
-                    String name = node.getName();
-                    if (name == null) {
-                        throw new SchemaException("Name is null", "");
-                    }
-                    properties.put(name, node);
+                for (Entry<String, SchemaNode> prop : root.getProperties().entrySet()) {
+                    properties.put(prop.getKey(), prop.getValue());
                 }
             }
         }
@@ -57,12 +54,8 @@ public final class CompiledSchema implements StructuredDocument {
         if (definitions == null) {
             definitions = new LinkedHashMap<>();
             if (root != null) {
-                for (SchemaNode node : root.getDefinitions().values()) {
-                    String name = node.getName();
-                    if (name == null) {
-                        throw new SchemaException("Name is null", "");
-                    }
-                    definitions.put(name, node);
+                for (Entry<String, SchemaNode> prop : root.getDefinitions().entrySet()) {
+                    definitions.put(prop.getKey(), prop.getValue());
                 }
             }
         }

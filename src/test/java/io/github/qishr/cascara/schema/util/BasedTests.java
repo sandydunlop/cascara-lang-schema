@@ -25,6 +25,7 @@ import io.github.qishr.cascara.schema.ast.ScalarSchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaType;
 import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.api.SchemaParser;
 import io.github.qishr.cascara.common.content.ContentLoader;
 import io.github.qishr.cascara.common.content.ResourceContent;

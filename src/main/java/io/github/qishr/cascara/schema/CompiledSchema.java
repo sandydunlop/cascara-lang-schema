@@ -4,7 +4,6 @@ import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.CommentAstNode;
 import io.github.qishr.cascara.schema.ast.*;
-import io.github.qishr.cascara.schema.util.SchemaException;
 
 import java.net.URI;
 import java.util.*;

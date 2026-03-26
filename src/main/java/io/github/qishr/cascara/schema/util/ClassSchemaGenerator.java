@@ -5,6 +5,7 @@ import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.simple.*;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.annotation.ContentMediaType;
 import io.github.qishr.cascara.schema.annotation.SchemaDefinition;
@@ -12,6 +13,7 @@ import io.github.qishr.cascara.schema.api.TypeAnalyzer;
 import io.github.qishr.cascara.schema.constraint.Hidden;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
+import io.github.qishr.cascara.schema.internal.SchemaUtils;
 
 import java.lang.reflect.*;
 import java.util.*;

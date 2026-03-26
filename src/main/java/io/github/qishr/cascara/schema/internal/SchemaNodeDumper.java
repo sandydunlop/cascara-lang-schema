@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.util;
+package io.github.qishr.cascara.schema.internal;
 
 import io.github.qishr.cascara.schema.ast.SchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaType;

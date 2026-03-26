@@ -9,6 +9,7 @@ import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.LazySchemaNode;

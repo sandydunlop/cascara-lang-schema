@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
-import io.github.qishr.cascara.schema.util.SchemaException;
 
 public interface SchemaResolver {
 

@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.util;
+package io.github.qishr.cascara.schema.internal;
 
 import java.util.Map;
 import java.util.Objects;

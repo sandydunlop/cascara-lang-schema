@@ -1,9 +1,9 @@
 package io.github.qishr.cascara.schema.ast;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
-import io.github.qishr.cascara.schema.util.SchemaException;
 import io.github.qishr.cascara.schema.util.ValidationResult;
 
 import java.net.URI;

@@ -17,6 +17,7 @@ import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.schema.api.SchemaParser;
@@ -26,6 +27,7 @@ import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.LazySchemaNode;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.internal.SchemaUtils;
 import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
 
 public class CascaraSchemaResolver implements SchemaResolver {

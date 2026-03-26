@@ -31,6 +31,7 @@ public interface SchemaNode extends AstNode {
     SchemaNode getDefinition(String name);
     Map<String, SchemaNode> getDefinitions();
     URI getOriginUri();
+    String getDynamicAnchor();
 
     // Data Defaults & Validation
     Object getDefaultValue();

@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.internal;
+package io.github.qishr.cascara.schema.util;
 
 import java.net.URI;
 import java.util.HashMap;

@@ -30,7 +30,7 @@ public abstract class BaseSchemaNode implements SchemaNode {
     private boolean readOnly = false; // Default to false
     private final java.util.Map<String, Object> extensions = new java.util.HashMap<>();
     private String contentMediaType;
-
+    private String dynamicAnchor;
 
     private final List<SchemaNode> allOf = new ArrayList<>();
     // TODO:
@@ -41,6 +41,9 @@ public abstract class BaseSchemaNode implements SchemaNode {
         this.name = name;
         this.type = type;
     }
+
+    public void setDynamicAnchor(String anchor) { this.dynamicAnchor = anchor; }
+    @Override public String getDynamicAnchor() { return dynamicAnchor; }
 
     @Override public void addAllOf(SchemaNode node) { this.allOf.add(node); }
     @Override public List<SchemaNode> getAllOf() { return Collections.unmodifiableList(allOf); }
@@ -198,8 +201,6 @@ public abstract class BaseSchemaNode implements SchemaNode {
 
     private SchemaNode getResolved(SchemaNode schema) {
         if (schema instanceof LazySchemaNode lazy) {
-            String message = String.format("Resolving %s -> %s", schema.getName(), schema.getRef());
-            System.out.println(message);
             SchemaNode resolved = lazy.getResolved();
             return resolved;
         } else {

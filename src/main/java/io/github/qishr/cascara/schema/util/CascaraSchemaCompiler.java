@@ -125,10 +125,14 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         String anchor = astNode.getString(SchemaKeyword.ANCHOR.string());
         String refValue = astNode.getString(SchemaKeyword.REF.string());
         BaseSchemaNode schemaNode;
+        String dynamicAnchor = astNode.getString(SchemaKeyword.DYNAMIC_ANCHOR.string());
 
         if (refValue != null && !refValue.isEmpty()) {
-            schemaNode = new LazySchemaNode(refValue, resolver, rootSchema, currentBase, astNode);
-        } else {
+            // Capture the scope from the resolver's ThreadLocal
+            DynamicScope scope = (resolver instanceof CascaraSchemaResolver r) ? r.getCurrentScope() : null;
+            schemaNode = new LazySchemaNode(refValue, resolver, rootSchema, currentBase, astNode, scope);
+        }
+        else {
             SchemaType type = extractType(astNode);
             schemaNode = switch (type) {
                 case OBJECT -> new ObjectSchemaNode(name);
@@ -145,7 +149,11 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             resolver.registerSchemaNode(currentBase.resolve("#" + anchor), schemaNode);
         }
 
-
+        // Store the dynamic anchor on the node
+        if (dynamicAnchor != null && !dynamicAnchor.isEmpty()) {
+            schemaNode.setDynamicAnchor(dynamicAnchor);
+            resolver.registerSchemaNode(currentBase.resolve("#" + dynamicAnchor), schemaNode);
+        }
 
         // --- Metadata ---
         schemaNode.setOriginAst(astNode);

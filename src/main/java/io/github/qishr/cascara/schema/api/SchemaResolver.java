@@ -7,10 +7,13 @@ import java.util.Map;
 import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.util.DynamicScope;
 
 public interface SchemaResolver {
 
     SchemaNode resolve(String ref, SchemaNode relativeTo) throws SchemaException;
+    SchemaNode resolve(String ref, SchemaNode relativeTo, DynamicScope scope) throws SchemaException;
+    DynamicScope getCurrentScope();
 
     CompiledSchema getSchemaForClass(Class<?> clazz) throws SchemaException;
     CompiledSchema getSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) throws SchemaException;

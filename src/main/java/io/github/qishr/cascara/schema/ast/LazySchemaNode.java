@@ -4,6 +4,7 @@ import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
+import io.github.qishr.cascara.schema.util.DynamicScope;
 import io.github.qishr.cascara.schema.util.ValidationResult;
 
 import java.net.URI;
@@ -17,8 +18,9 @@ public class LazySchemaNode extends BaseSchemaNode {
     private SchemaNode resolvedNode;
     private SchemaNode root;
     private AstNode initialAst;
+    private final DynamicScope capturedScope;
 
-    public LazySchemaNode(String ref, SchemaResolver resolver, SchemaNode root, URI originUri, AstNode originAst) {
+    public LazySchemaNode(String ref, SchemaResolver resolver, SchemaNode root, URI originUri, AstNode originAst, DynamicScope scope) {
         super(ref, null);
         // if (root == null) {
         //     throw new SchemaException("BUG: NULL ROOT", ref);
@@ -28,6 +30,7 @@ public class LazySchemaNode extends BaseSchemaNode {
         this.root = root;
         this.originUri = originUri;
         this.initialAst = originAst;
+        this.capturedScope = scope;
     }
 
     public void setRoot(SchemaNode root) {
@@ -44,16 +47,20 @@ public class LazySchemaNode extends BaseSchemaNode {
 
     public SchemaNode getResolved() throws SchemaException {
         if (resolvedNode == null) {
-            System.out.println("Lazy node resolving: " + ref);
-            // Perform the initial resolution (e.g., looking up the $ref)
-            SchemaNode result = resolver.resolve(ref, this);
-            // If the result is itself another Lazy node, resolve it immediately.
+
+            // Ensure we always have a scope context
+            DynamicScope scope = (capturedScope != null) ? capturedScope : new DynamicScope(null);
+
+            // Use the scope-aware resolve method
+            SchemaNode result = resolver.resolve(ref, this, scope);
+
             while (result instanceof LazySchemaNode lazy) {
                 result = lazy.getResolved();
             }
             this.resolvedNode = result;
+
             if (result == null) {
-                resolver.resolve(ref, this);
+                // Fallback for error reporting
                 throw new SchemaException("Resolution failed", ref, getStartLine(), getStartColumn(), getOriginUri());
             }
         }

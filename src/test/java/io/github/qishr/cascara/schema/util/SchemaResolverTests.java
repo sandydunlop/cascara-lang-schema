@@ -278,15 +278,10 @@ public class SchemaResolverTests {
         URI uri = URI.create("https://json-schema.org/draft/2020-12/meta/validation");
         CompiledSchema schema = resolver.getSchema(uri);
 
-        System.out.println("\nFirst Test Resoltion");
         if (schema.getProperty("minLength") instanceof LazySchemaNode lazy) {
             lazy.getResolved();
         }
 
-        // If the above getResolved call is removed, the following one succeeds.
-        // But with the above one there, the following one fails.
-
-        System.out.println("\nSecond Test Resoltion");
         if (schema.getProperty("minItems") instanceof LazySchemaNode lazy) {
             lazy.getResolved();
         }

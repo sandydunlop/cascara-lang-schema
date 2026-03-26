@@ -41,6 +41,8 @@ public class CascaraSchemaResolver implements SchemaResolver {
     private final Map<URI, SchemaNode> schemaNodeCache = new HashMap<>();
     private final Map<URI, CompiledSchema> schemaDocCache = new HashMap<>();
 
+    private final ThreadLocal<DynamicScope> currentScope = new ThreadLocal<>();
+
     public CascaraSchemaResolver(SchemaParser parserService, ContentLoader contentLoaderService) {
         this.contentLoaderService = contentLoaderService;
         this.parserService = parserService;
@@ -101,26 +103,103 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
     @Override
     public SchemaNode resolve(String ref, SchemaNode relativeTo) throws SchemaException {
+        // Start with an empty root scope for a fresh resolution
+        DynamicScope scope = new DynamicScope(null);
+        currentScope.set(scope);
+        try {
+            return resolve(ref, relativeTo, scope);
+        } finally {
+            currentScope.remove(); // Prevent memory leaks
+        }
+    }
+
+    @Override
+    public SchemaNode resolve(String ref, SchemaNode relativeTo, DynamicScope scope) throws SchemaException {
+        // Set the ThreadLocal so the Compiler can find it during this resolution
+        DynamicScope previous = currentScope.get();
+        currentScope.set(scope);
+
+        try {
+            return resolveInternal(ref, relativeTo, scope);
+        } finally {
+            // Restore previous scope (handles nested resolutions)
+            if (previous != null) {
+                currentScope.set(previous);
+            } else {
+                currentScope.remove();
+            }
+        }
+    }
+
+    // Internal version that carries the scope
+    private SchemaNode resolveInternal(String ref, SchemaNode relativeTo, DynamicScope scope) throws SchemaException {
         URI baseUri = relativeTo.getOriginUri();
-        URI targetUri = baseUri.resolve(ref);
-        URI docUri = stripFragment(targetUri);
+        URI targetUri;
 
-        // If the compiled `SchemaNode` is cached, return it
-        SchemaNode schemaNode = schemaNodeCache.get(targetUri);
-        if (schemaNode != null) return schemaNode;
-
-        // Get the `CompiledSchema` document
-        CompiledSchema schemaDoc = getSchema(docUri);
-
-        // Resolve the fragment against the schema
-        String fragment = targetUri.getFragment();
-        schemaNode = resolveFragment(schemaDoc, fragment);
-
-        if (schemaNode == null) {
-            throw new SchemaException("Resolution failed", ref, relativeTo.getStartLine(), relativeTo.getStartColumn(), baseUri);
+        // 1. Intercept for $dynamicRef BEFORE standard URI resolution
+        if (isDynamic(ref)) {
+            String anchorName = extractAnchorName(ref);
+            URI dynamicTarget = scope.findAnchor(anchorName);
+            if (dynamicTarget != null) {
+                targetUri = dynamicTarget;
+            } else {
+                // Fallback to standard fragment resolution if no anchor found
+                targetUri = baseUri.resolve(ref);
+            }
+        } else {
+            targetUri = baseUri.resolve(ref);
         }
 
+        // If the compiled `SchemaNode` is cached, return it
+        SchemaNode cached = schemaNodeCache.get(targetUri);
+        if (cached != null) return cached;
+
+        // 3. The Compiler/Document Load (Your existing logic)
+        URI docUri = stripFragment(targetUri);
+        CompiledSchema schemaDoc = getSchema(docUri); // This triggers compilation if needed
+
+        // 4. Fragment Resolution
+        String fragment = targetUri.getFragment();
+        SchemaNode schemaNode = resolveFragment(schemaDoc, fragment);
+
+        if (schemaNode == null) {
+            throw new SchemaException("Resolution failed", ref, relativeTo.getStartLine(),
+                                      relativeTo.getStartColumn(), baseUri);
+        }
+
+        // 5. Update Cache and return
+        schemaNodeCache.put(targetUri, schemaNode);
         return schemaNode;
+    }
+
+    //
+    // New code
+    //
+
+    public DynamicScope getCurrentScope() { return currentScope.get(); }
+
+    private SchemaNode resolveFragment(CompiledSchema schemaDoc, String fragment) {
+        return resolveFragment(schemaDoc, fragment, new DynamicScope(null));
+    }
+
+    private SchemaNode updateScope(SchemaNode node, DynamicScope scope) {
+        if (node == null) return null;
+
+        // Check for $dynamicAnchor (using the extension map we set in the compiler)
+        Object dynamicAnchor = node.getExtension(SchemaKeyword.DYNAMIC_ANCHOR.string());
+        if (dynamicAnchor instanceof String anchorName) {
+            // Register this node's URI for this anchor name in the current resolution path
+            scope.addAnchor(anchorName, node.getOriginUri());
+        }
+        return node;
+    }
+
+    private boolean isDynamic(String ref) {
+        return ref != null && ref.startsWith("#") && !ref.contains("/");
+    }
+
+    private String extractAnchorName(String ref) {
+        return ref.substring(1);
     }
 
     //
@@ -133,33 +212,35 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return originUri;
     }
 
-    private SchemaNode resolveFragment(CompiledSchema schemaDoc, String fragment) {
-        if (fragment == null || fragment.isEmpty()) {
-            return schemaDoc.getRoot();
+    private SchemaNode resolveFragment(CompiledSchema schemaDoc, String fragment, DynamicScope scope) throws SchemaException {
+        if (fragment == null || fragment.isEmpty() || fragment.equals("/")) {
+            return updateScope(schemaDoc.getRoot(), scope);
         }
 
         AstNode targetAst = null;
 
-        // 1. Try resolving as a JSON Pointer (e.g., /definitions/bug)
+        // 1. Resolve the AST location (Pointer or Anchor)
         if (fragment.startsWith("/")) {
             try {
+                // Your existing SchemaUtils or Pointer logic
                 targetAst = SchemaUtils.resolveFragment(schemaDoc.getRoot().getOriginAst(), fragment);
-            } catch (Exception ignored) {
-                // Pointer resolution failed, might be an anchor instead
-            }
+            } catch (Exception ignored) {}
         }
 
-        // 2. If not a pointer, or pointer failed, treat as a Plain Name Anchor
         if (targetAst == null) {
+            // Your existing anchor lookup
             targetAst = findNodeByAnchor(schemaDoc.getRoot().getOriginAst(), fragment);
         }
 
-        if (fragment.equals("/$defs/nonNegativeIntegerDefault0")) {
-            System.out.println("Debug");
+        // 2. Map AST back to SchemaNode
+        SchemaNode found = findNodeByAst(schemaDoc.getRoot(), targetAst);
+
+        if (found == null) {
+            throw new SchemaException("Could not find node for fragment", fragment);
         }
 
-        // 3. Link the found AST back to the compiled SchemaNode tree
-        return findNodeByAst(schemaDoc.getRoot(), targetAst);
+        // 3. Update the Dynamic Scope and return
+        return updateScope(found, scope);
     }
 
     private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst) {
@@ -168,13 +249,6 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
     private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst, int depth) {
         if (root == null || targetAst == null) return null;
-
-        System.out.print("  ".repeat(depth));
-        if (root instanceof LazySchemaNode) {
-            System.out.println("findNodeByAst " + root.getRef());
-        } else {
-            System.out.println("findNodeByAst " + root.getName());
-        }
 
         // 1. Double-Identity Check
         // Check the current identity (Proxy/Resolved)
@@ -222,6 +296,12 @@ public class CascaraSchemaResolver implements SchemaResolver {
             String id = map.getString(SchemaKeyword.ID.string());
             String nodeAnchor = map.getString(SchemaKeyword.ANCHOR.string());
 
+            String dynAnchor = map.getString(SchemaKeyword.DYNAMIC_ANCHOR.string());
+
+            if (anchor.equals(id) || anchor.equals(nodeAnchor) || anchor.equals(dynAnchor)) {
+                return map;
+            }
+
             if (anchor.equals(id) || anchor.equals(nodeAnchor)) {
                 return map;
             }
@@ -261,7 +341,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
         try {
             return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null);
         } catch (Exception e) {
-            throw new SchemaException("Failed to strip fragment from URI", e, uri.toString());
+            return uri;
         }
     }
 

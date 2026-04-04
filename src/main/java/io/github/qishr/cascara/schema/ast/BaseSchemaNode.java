@@ -3,6 +3,7 @@ package io.github.qishr.cascara.schema.ast;
 import io.github.qishr.cascara.common.lang.annotation.Nullable;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.CommentAstNode;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
 import io.github.qishr.cascara.schema.util.ValidationResult;
 
@@ -14,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class BaseSchemaNode implements SchemaNode {
-    private String name;
     private SchemaType type;
     private String title;
     private String description;
@@ -23,7 +23,7 @@ public abstract class BaseSchemaNode implements SchemaNode {
     protected String ref;
     private AstNode originAst;
 
-    private final Map<String, SchemaNode> definitions = new HashMap<>();
+    protected final Map<String, SchemaNode> definitions = new HashMap<>();
     private final List<ValidationRule> rules = new ArrayList<>();
     private String format = "";
     private final Map<String, String> formatOptions = new HashMap<>();
@@ -31,15 +31,16 @@ public abstract class BaseSchemaNode implements SchemaNode {
     private final java.util.Map<String, Object> extensions = new java.util.HashMap<>();
     private String contentMediaType;
     private String dynamicAnchor;
+    private final SchemaNode metaSchema;
 
     private final List<SchemaNode> allOf = new ArrayList<>();
     // TODO:
     // private final List<SchemaNode> anyOf = new ArrayList<>();
     // private final List<SchemaNode> oneOf = new ArrayList<>();
 
-    public BaseSchemaNode(String name, SchemaType type) {
-        this.name = name;
+    public BaseSchemaNode(SchemaType type, SchemaNode metaSchema) {
         this.type = type;
+        this.metaSchema = metaSchema;
     }
 
     public void setDynamicAnchor(String anchor) { this.dynamicAnchor = anchor; }
@@ -62,7 +63,6 @@ public abstract class BaseSchemaNode implements SchemaNode {
     public void addRule(ValidationRule rule) { this.rules.add(rule); }
     public void addDefinition(String key, SchemaNode node) { this.definitions.put(key, node); }
 
-    public void setName(String name) { this.name = name; }
     public void setType(SchemaType type) { this.type = type; }
     public void setOriginUri(URI originUri) { this.originUri = originUri; }
     public void setTitle(String title) { this.title = title; }
@@ -116,7 +116,6 @@ public abstract class BaseSchemaNode implements SchemaNode {
         return extensions;
     }
 
-    @Override public String getName() { return name; }
     @Override public SchemaType getType() { return type; }
     @Override public String getTitle() { return title; }
     @Override public String getDescription() { return description; }
@@ -186,7 +185,7 @@ public abstract class BaseSchemaNode implements SchemaNode {
         SchemaNode local = this.getProperties().get(key);
         if (local != null) return getResolved(local);
 
-        // 2. Tunnel through Compositions (The Meta-Schema secret sauce)
+        // 2. Tunnel through Compositions
         // Draft 2020-12 uses allOf to pull in 'meta/validation' and 'meta/applicator'
         for (SchemaNode sub : getAllOf()) {
             SchemaNode resolvedSub = getResolved(sub);
@@ -206,5 +205,11 @@ public abstract class BaseSchemaNode implements SchemaNode {
         } else {
             return schema;
         }
+    }
+
+    @Override
+    public SchemaNode getMetaSchema() {
+        // If this IS the root Meta-Schema, it returns itself to close the loop.
+        return metaSchema != null ? metaSchema : this;
     }
 }

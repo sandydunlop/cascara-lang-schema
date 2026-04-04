@@ -5,11 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
 import io.github.qishr.cascara.schema.util.ValidationResult;
 
 public interface SchemaNode extends AstNode {
-    String getName();
     SchemaType getType();
 
     /// The human-readable title
@@ -43,24 +43,9 @@ public interface SchemaNode extends AstNode {
     String getContentMediaType();
     void setContentMediaType(String contentMediaType);
 
-
-
-    // TODO: These will be replaced by custom hints
-    // String getOptionProvider();
-    // void setOptionProvider(String providerId);
-    // String getProviderParameter();
-    // void setProviderParameter(String parameter);
-    // boolean isHidden();
-    // void setHidden(boolean hidden);
-
-
     void setExtension(String key, Object value);
     Object getExtension(String key);
     Map<String,Object> getExtensions();
-
-
-
-
 
     boolean isReadOnly();
     void setReadOnly(boolean readOnly);
@@ -83,4 +68,18 @@ public interface SchemaNode extends AstNode {
     void addAllOf(SchemaNode node);
     List<SchemaNode> getAllOf();
     SchemaNode getPropertySchema(String key);
+
+    default boolean areAdditionalPropertiesAllowed() {
+        return true;
+    }
+
+    default SchemaNode getAdditionalPropertiesSchema() {
+        return null;
+    }
+
+
+    /// Returns the schema that defines the structure of THIS node.
+    /// For a standard property, this returns the JSON Schema Meta-Schema.
+    /// For a CEMA property, this might return the CEMA Meta-Schema.
+    SchemaNode getMetaSchema();
 }

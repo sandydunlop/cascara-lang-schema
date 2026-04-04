@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.net.URI;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -24,10 +25,14 @@ import io.github.qishr.cascara.schema.ast.SchemaNode;
 
 public class SchemaResolverTests {
     CascaraSchemaResolver resolver;
+    CascaraSchemaCompiler compiler;
+    CascaraSchemaDecompiler decompiler;
 
     @BeforeEach
     void setup() {
         resolver = new CascaraSchemaResolver(null, null);
+        compiler = new CascaraSchemaCompiler(resolver);
+        decompiler = new CascaraSchemaDecompiler();
     }
 
     StructuredDocument createTagDoc() {
@@ -285,5 +290,44 @@ public class SchemaResolverTests {
         if (schema.getProperty("minItems") instanceof LazySchemaNode lazy) {
             lazy.getResolved();
         }
+    }
+
+    @Disabled // This should probably be removed - I think it's testing invalid behavior
+    @Test
+    void resolution_shouldSurviveDecompilationRoundTrip() {
+        // 1. SETUP: Create the AST for 'doc' manually
+        SimpleMapNode rootAst = new SimpleMapNode();
+        rootAst.put("$id", new SimpleScalarNode("cascara://test"));
+
+        SimpleMapNode defsAst = new SimpleMapNode();
+
+        // Create 'TestLayer' definition
+        SimpleMapNode testLayerAst = new SimpleMapNode();
+        testLayerAst.put("type", new SimpleScalarNode("object"));
+        defsAst.put("TestLayer", testLayerAst);
+
+        rootAst.put("definitions", defsAst);
+        StructuredDocument doc = new SimpleDocument(rootAst);
+
+        // 2. COMPILE: First pass
+        CompiledSchema original = compiler.compile(doc, URI.create("cascara://test"));
+
+        // 3. DECOMPILE: Move from Compiled Graph back to AST
+        CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
+        SimpleMapNode decompiledAst = (SimpleMapNode) decompiler.decompile(original);
+
+        // 4. RE-COMPILE: Re-hydrate the AST back into a Compiled Schema
+        // This is where the Migration Service was failing
+        CompiledSchema recompiled = compiler.compile(new SimpleDocument(decompiledAst), URI.create("cascara://test"));
+
+        // 5. ASSERT: Verify the graph is still traversable
+        // We use the resolver directly to ensure the fragment logic is sound
+        SchemaNode originalNode = resolver.resolve("#/definitions/TestLayer", original.getRoot());
+        SchemaNode recompiledNode = resolver.resolve("#/definitions/TestLayer", recompiled.getRoot());
+
+        assertNotNull(originalNode, "Original resolution failed - check compiler logic");
+        assertNotNull(recompiledNode, "Fragment resolution failed after round-trip! Decompiler likely dropped 'definitions'");
+        assertEquals(originalNode.getType(), recompiledNode.getType(), "Type mismatch after round-trip");
+        // assertEquals("TestLayer", recompiledNode.getName(), "Node name was lost during round-trip");
     }
 }

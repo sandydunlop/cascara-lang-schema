@@ -1,5 +1,6 @@
 package io.github.qishr.cascara.schema.util;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,6 +12,7 @@ import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.LazySchemaNode;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
@@ -24,7 +26,7 @@ import io.github.qishr.cascara.schema.rule.RequiredRule;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
 
 public final class CascaraSchemaDecompiler {
-    private static final String META_SCHEMA = "https://json-schema.org/draft/2020-12/schema";
+    private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema";
     private static final String ARRAY = "array";
     private static final String OBJECT = "object";
 
@@ -41,17 +43,25 @@ public final class CascaraSchemaDecompiler {
     private static final String TITLE = "title";
     private static final String TYPE = "type";
 
+    private static final String DYNAMIC_ANCHOR = "$dynamicAnchor";
+    private static final String DYNAMIC_REF = "$dynamicRef";
+
     public SimpleMapNode decompile(CompiledSchema compiled) {
         if (compiled == null || compiled.getRoot() == null) return null;
 
+        SchemaNode compiledRoot = compiled.getRoot();
         SimpleMapNode root = new SimpleMapNode();
-        root.put(SCHEMA, scalarValue(META_SCHEMA));
-        root.put(ID, scalarValue(compiled.getOriginUri()));
 
-        ObjectSchemaNode compiledRoot = compiled.getRoot();
-        if (compiledRoot.getName() != null && !compiledRoot.getName().isEmpty()) {
-            root.put("name", scalarValue(compiledRoot.getName()));
+        // DYNAMIC DIALECT: Use the Meta-Schema URI actually associated with the node
+        // This handles CEMA vs Vanilla automatically.
+        URI metaUri = compiledRoot.getMetaSchema().getOriginUri();
+        if (metaUri != null) {
+            root.put(SCHEMA, scalarValue(metaUri.toString()));
+        } else {
+            root.put(SCHEMA, scalarValue(META_SCHEMA_URI));
         }
+
+        root.put(ID, scalarValue(compiled.getOriginUri()));
 
         SimpleMapNode decompiled = decompileInternal(compiledRoot);
         for (SimpleMapEntryNode entry : decompiled.getEntries()) {
@@ -71,10 +81,13 @@ public final class CascaraSchemaDecompiler {
             decompiled.put(e.getKey(), scalarValue(e.getValue()));
         }
 
-        // TODO: There are extensions with Object values...
-        for (var e : extensions(compiled).entrySet()) {
-            decompiled.put(e.getKey(), scalarValue(e.getValue()));
-        }
+        compiled.getExtensions().forEach((key, value) -> {
+            if (value instanceof Map<?,?> mapValue) {
+                decompiled.put(key, convertToSimpleMap(mapValue));
+            } else {
+                decompiled.put(key, scalarValue(value));
+            }
+        });
 
         // type-specific structure
         SimpleMapNode node = switch (compiled.getType()) {
@@ -82,9 +95,14 @@ public final class CascaraSchemaDecompiler {
                 if (compiled instanceof ObjectSchemaNode o) {
                     yield object(o);
                 }
-                else if (compiled instanceof LazySchemaNode bridge) {
+                else if (compiled instanceof LazySchemaNode lazy) {
                     SimpleMapNode map = new SimpleMapNode();
-                    map.put(REF, scalarValue(bridge.getRef()));
+                    // String reference = bridge.getRef();
+
+                    SimpleMapNode refMap = new SimpleMapNode();
+                    String ref = lazy.getRef();
+                    String refKey = (ref != null && ref.startsWith("#") && !ref.contains("/")) ? DYNAMIC_REF : REF;
+                    refMap.put(refKey, scalarValue(ref));
                     yield map;
                 }
                 else {
@@ -134,10 +152,16 @@ public final class CascaraSchemaDecompiler {
             map.put(PROPERTIES, properties);
         }
 
-        if (!object.areAdditionalPropertiesAllowed()) {
+        if (object.getAdditionalPropertiesSchema() != null) {
+            map.put("additionalProperties", decompileInternal(object.getAdditionalPropertiesSchema()));
+        } else if (!object.areAdditionalPropertiesAllowed()) {
             map.put("additionalProperties", new SimpleScalarNode(false));
         }
-        if (!object.areUnevaluatedPropertiesAllowed()) {
+
+        // Handle unevaluatedProperties
+        if (object.getUnevaluatedPropertiesSchema() != null) {
+            map.put("unevaluatedProperties", decompileInternal(object.getUnevaluatedPropertiesSchema()));
+        } else if (!object.areUnevaluatedPropertiesAllowed()) {
             map.put("unevaluatedProperties", new SimpleScalarNode(false));
         }
 
@@ -152,7 +176,7 @@ public final class CascaraSchemaDecompiler {
         SchemaNode template = array.getItemSchema();
         if (template instanceof LazySchemaNode lazy) {
             if (lazy.getRef() == null || lazy.getRef().isEmpty()) {
-                throw new SchemaException("Missing $ref: ", array.getName());
+                throw new SchemaException("Missing $ref: ", array.getOriginUri().toString());
             }
             items.put(REF, scalarValue(lazy.getRef()));
         }
@@ -160,14 +184,20 @@ public final class CascaraSchemaDecompiler {
             items.put(TYPE, scalarValue(template.getType().toString().toLowerCase()));
         }
 
-        map.put(ITEMS, items);
+        if (template != null) {
+            // Recurse so nested structures in arrays are fully decompiled
+            map.put(ITEMS, decompileInternal(template));
+        }
+
         return map;
     }
 
     private SimpleMapNode scalar(SchemaNode node) {
         SimpleMapNode map = new SimpleMapNode();
         String type = node.getType().toString().toLowerCase();
-        map.put(TYPE, scalarValue(type));
+        if (type != null && node.getType() != SchemaType.ANY) {
+            map.put(TYPE, scalarValue(type));
+        }
         return map;
     }
 
@@ -194,15 +224,23 @@ public final class CascaraSchemaDecompiler {
         if (compiled.getDefaultValue() != null) {
             map.put(DEFAULT, compiled.getDefaultValue());
         }
+        if (compiled.getDynamicAnchor() != null && !compiled.getDynamicAnchor().isEmpty()) {
+            map.put(DYNAMIC_ANCHOR, compiled.getDynamicAnchor());
+        }
         return map;
     }
 
-    private Map<String, Object> extensions(SchemaNode compiled) {
-        Map<String, Object> map = new HashMap<>();
-        compiled.getExtensions().forEach((key,value) -> {
-            map.put(key, value);
-        });
-        return map;
+    private SimpleMapNode convertToSimpleMap(Map<?, ?> map) {
+        SimpleMapNode node = new SimpleMapNode();
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object val = entry.getValue();
+            if (val instanceof Map<?, ?> subMap) {
+                node.put(entry.getKey().toString(), convertToSimpleMap(subMap));
+            } else {
+                node.put(entry.getKey().toString(), scalarValue(val));
+            }
+        }
+        return node;
     }
 
     private SimpleSequenceNode sequenceOf(Iterable<?> values) {

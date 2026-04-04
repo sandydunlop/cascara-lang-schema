@@ -16,6 +16,7 @@ import io.github.qishr.cascara.common.lang.ast.ScalarAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.SchemaKeyword;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
@@ -24,16 +25,19 @@ import io.github.qishr.cascara.schema.ast.LazySchemaNode;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.ast.ScalarSchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaType;
 import io.github.qishr.cascara.schema.rule.EnumRule;
 import io.github.qishr.cascara.schema.rule.MaxItemsRule;
+import io.github.qishr.cascara.schema.rule.MaxLengthRule;
 import io.github.qishr.cascara.schema.rule.MaxValueRule;
 import io.github.qishr.cascara.schema.rule.MinItemsRule;
+import io.github.qishr.cascara.schema.rule.MinLengthRule;
 import io.github.qishr.cascara.schema.rule.MinValueRule;
 import io.github.qishr.cascara.schema.rule.RequiredRule;
 import io.github.qishr.cascara.schema.util.CascaraSchemaCompiler;
 
 public class CascaraSchemaCompiler implements SchemaCompiler {
+    private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema";
+
     // TODO: These should be in a TypeAnalyzer
     private static final String ABSOLUTE = "absolute";
     private static final String EXTENSIONS = "extensions";
@@ -105,16 +109,43 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             name = ROOT;
         }
 
-        SchemaNode schemaRoot = processNode(map, name, originUri, originUri, null);
 
-        CompiledSchema compiled = new CompiledSchema(name, (ObjectSchemaNode) schemaRoot);
+
+
+        // RESOLVE THE META-SCHEMA
+        // Look for $schema in the root map. If not found, use a default from the resolver.
+        URI metaUri = URI.create(META_SCHEMA_URI);
+        String schemaRef = map.getString(SchemaKeyword.SCHEMA.string());
+        if (schemaRef != null) {
+            metaUri = originUri.resolve(schemaRef);
+        }
+
+        SchemaNode metaRoot = null;
+        if (!originUri.equals(metaUri)) {
+            try {
+                CompiledSchema metaDoc = resolver.getSchema(metaUri);
+                metaRoot = metaDoc.getRoot();
+            } catch (Exception e) {
+                reporter.warn("Could not resolve meta-schema: " + metaUri);
+            }
+        }
+
+
+
+
+        SchemaNode schemaRoot = processNode(map, name, originUri, originUri, null, metaRoot);
+
+        CompiledSchema compiled = new CompiledSchema(originUri, schemaRoot);
         resolver.registerSchema(originUri, compiled);
         finalizeNodes(compiled.getRoot());
         return compiled;
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private SchemaNode processNode(MapAstNode astNode, String name, URI originUri, URI logicalBaseUri, SchemaNode rootSchema) {
+    private SchemaNode processNode(MapAstNode astNode, String name, URI originUri, URI logicalBaseUri, SchemaNode rootSchema, SchemaNode meta) {
+
+
+
 
         // 1. Calculate Logical Base ($id) and handle $anchor
         String idValue = astNode.getString(SchemaKeyword.ID.string());
@@ -124,22 +155,54 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
 
         String anchor = astNode.getString(SchemaKeyword.ANCHOR.string());
         String refValue = astNode.getString(SchemaKeyword.REF.string());
-        BaseSchemaNode schemaNode;
         String dynamicAnchor = astNode.getString(SchemaKeyword.DYNAMIC_ANCHOR.string());
 
-        if (refValue != null && !refValue.isEmpty()) {
-            // Capture the scope from the resolver's ThreadLocal
-            DynamicScope scope = (resolver instanceof CascaraSchemaResolver r) ? r.getCurrentScope() : null;
-            schemaNode = new LazySchemaNode(refValue, resolver, rootSchema, currentBase, astNode, scope);
+        if (refValue == null || refValue.isEmpty()) {
+            refValue = astNode.getString("$dynamicRef");
         }
-        else {
+
+
+
+
+        // 1. Check for a local Meta-Schema override ($schema)
+        SchemaNode currentMeta = meta;
+        String localSchema = astNode.getString("$schema");
+        if (localSchema != null) {
+            try {
+                // Resolve the new meta-schema URI relative to the current base
+                URI metaUri = logicalBaseUri.resolve(localSchema);
+                // currentMeta = resolver.getSchema(metaUri).getRoot();
+                if (originUri.equals(metaUri)) {
+                    // If we are the meta-schema, our 'meta' is null (or 'this' logic applies)
+                    currentMeta = (rootSchema != null) ? rootSchema : null;
+                } else {
+                    try {
+                        currentMeta = resolver.getSchema(metaUri).getRoot();
+                    } catch (Exception e) {
+                        reporter.warn("Could not resolve local $schema: " + localSchema);
+                    }
+                }
+            } catch (Exception e) {
+                // Fallback to the parent meta if the local one fails to load
+                reporter.warn("Could not resolve local $schema: " + localSchema);
+            }
+        }
+
+        // 2. Use 'currentMeta' for the rest of this node and its children
+        BaseSchemaNode schemaNode;
+        if (refValue != null && !refValue.isEmpty()) {
+            DynamicScope scope = (resolver instanceof CascaraSchemaResolver r) ? r.getCurrentScope() : null;
+            schemaNode = new LazySchemaNode(refValue, resolver, rootSchema, currentBase, astNode, scope, currentMeta);
+        } else {
             SchemaType type = extractType(astNode);
             schemaNode = switch (type) {
-                case OBJECT -> new ObjectSchemaNode(name);
-                case ARRAY  -> new ArraySchemaNode(name);
-                default     -> new ScalarSchemaNode(name, type);
+                case OBJECT -> new ObjectSchemaNode(currentMeta);
+                case ARRAY  -> new ArraySchemaNode(currentMeta);
+                default     -> new ScalarSchemaNode(type, currentMeta);
             };
         }
+
+
 
 
         if (idValue != null) {
@@ -165,22 +228,29 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         SchemaNode effectiveRoot = (rootSchema == null) ? schemaNode : rootSchema;
 
         if (schemaNode instanceof ObjectSchemaNode objNode) {
-            // additionalProperties
             AstNode addProps = astNode.get(SchemaKeyword.ADDITIONAL_PROPERTIES.string());
             if (addProps instanceof ScalarAstNode scalar) {
-                Object val = scalar.getPrimitiveValue();
-                if (val instanceof Boolean b) {
+                if (scalar.getPrimitiveValue() instanceof Boolean b) {
                     objNode.setAdditionalPropertiesAllowed(b);
                 }
+            } else if (addProps instanceof MapAstNode mapAddProps) {
+                // NEW: It's a schema object!
+                objNode.setAdditionalPropertiesSchema(
+                    processNode(mapAddProps, "additionalProperties", originUri, currentBase, effectiveRoot, meta)
+                );
             }
 
             // unevaluatedProperties
             AstNode unevProps = astNode.get(SchemaKeyword.UNEVALUATED_PROPERTIES.string());
             if (unevProps instanceof ScalarAstNode scalar) {
-                Object val = scalar.getPrimitiveValue();
-                if (val instanceof Boolean b) {
+                if (scalar.getPrimitiveValue() instanceof Boolean b) {
                     objNode.setUnevaluatedPropertiesAllowed(b);
                 }
+            } else if (unevProps instanceof MapAstNode mapUnevProps) {
+                // NEW: It's a schema object!
+                objNode.setUnevaluatedPropertiesSchema(
+                    processNode(mapUnevProps, "unevaluatedProperties", originUri, currentBase, effectiveRoot, meta)
+                );
             }
 
             // Properties recursion
@@ -190,7 +260,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                             entryNode.getKey() instanceof ScalarAstNode scalar &&
                             entryNode.getValue() instanceof MapAstNode m) {
                         String propName = scalar.getString();
-                        objNode.addProperty(propName, processNode(m, propName, originUri, currentBase, effectiveRoot));
+                        objNode.addProperty(propName, processNode(m, propName, originUri, currentBase, effectiveRoot, meta));
                     }
                 });
             }
@@ -198,7 +268,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         else if (schemaNode instanceof ArraySchemaNode arrNode) {
             AstNode itemsAst = astNode.get(SchemaKeyword.ITEMS.string());
             if (itemsAst instanceof MapAstNode itemsMap) {
-                arrNode.setItemTemplate(processNode(itemsMap, ITEM, originUri, currentBase, effectiveRoot));
+                arrNode.setItemTemplate(processNode(itemsMap, ITEM, originUri, currentBase, effectiveRoot, meta));
             }
         }
 
@@ -211,7 +281,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                         entryNode.getValue() instanceof MapAstNode m &&
                         entryNode.getKey() instanceof ScalarAstNode scalar) {
                     String key = scalar.getString();
-                    SchemaNode defNode = processNode(m, key, originUri, currentBase, effectiveRoot);
+                    SchemaNode defNode = processNode(m, key, originUri, currentBase, effectiveRoot, meta);
                     if (effectiveRoot instanceof ObjectSchemaNode objRoot) {
                         objRoot.addDefinition(key, defNode);
                     }
@@ -220,9 +290,9 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         }
 
         // --- Logic & Extensions ---
-        processComposition(astNode, SchemaKeyword.ALL_OF, schemaNode, currentBase, effectiveRoot);
-        processComposition(astNode, SchemaKeyword.ANY_OF, schemaNode, currentBase, effectiveRoot);
-        processComposition(astNode, SchemaKeyword.ONE_OF, schemaNode, currentBase, effectiveRoot);
+        processComposition(astNode, SchemaKeyword.ALL_OF, schemaNode, currentBase, effectiveRoot, meta);
+        processComposition(astNode, SchemaKeyword.ANY_OF, schemaNode, currentBase, effectiveRoot, meta);
+        processComposition(astNode, SchemaKeyword.ONE_OF, schemaNode, currentBase, effectiveRoot, meta);
 
         attachRules(astNode, schemaNode);
         handleExtensions(astNode, schemaNode);
@@ -231,12 +301,12 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private void processComposition( MapAstNode astNode, SchemaKeyword key, BaseSchemaNode parent, URI uri, SchemaNode root) {
+    private void processComposition( MapAstNode astNode, SchemaKeyword key, BaseSchemaNode parent, URI uri, SchemaNode root, SchemaNode meta) {
         if (astNode.get(key.string()) instanceof SequenceAstNode seq) {
             seq.getElements().forEach(element -> {
                 if (element instanceof MapAstNode m) {
                     // TODO: Again, originUri same as node URI?!
-                    SchemaNode subSchema = processNode(m, key.string() + "-item", uri, uri, root);
+                    SchemaNode subSchema = processNode(m, key.string() + "-item", uri, uri, root, meta);
 
                     // ATTACH IT to the parent
                     if (key == SchemaKeyword.ALL_OF) {
@@ -404,6 +474,13 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         int maxItems = astNode.getInteger(SchemaKeyword.MAX_ITEMS.string(), -1);
         if (maxItems != -1) schemaNode.addRule(new MaxItemsRule(maxItems));
 
+        // MinLengthRule / MaxLengthRule
+        int minLength = astNode.getInteger(SchemaKeyword.MIN_LENGTH.string(), -1);
+        if (minLength != -1) schemaNode.addRule(new MinLengthRule(minLength));
+
+        int maxLength = astNode.getInteger(SchemaKeyword.MAX_LENGTH.string(), -1);
+        if (maxLength != -1) schemaNode.addRule(new MaxLengthRule(maxLength));
+
         // RequiredRule (usually handled at the object level in JSON schema)
         if (astNode.get(SchemaKeyword.REQUIRED.string()) instanceof SequenceAstNode reqNode) {
              @SuppressWarnings("rawtypes")
@@ -415,14 +492,25 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         }
     }
 
-
-    private static SchemaType extractType(@SuppressWarnings({ "rawtypes" }) MapAstNode node) {
+    private static SchemaType extractType(@SuppressWarnings("rawtypes") MapAstNode node) {
         String typeStr = node.getString(SchemaKeyword.TYPE.string());
-        if (typeStr == null || typeStr.isEmpty()) return SchemaType.OBJECT;
-        try {
-            return SchemaType.valueOf(typeStr.toUpperCase());
-        } catch (IllegalArgumentException e) {
+        if (typeStr != null && !typeStr.isEmpty()) {
+            try {
+                return SchemaType.valueOf(typeStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return SchemaType.ANY;
+            }
+        }
+
+        // Inference: If it has these structural keys, it's effectively an object
+        if (node.containsKey("properties") ||
+            node.containsKey("definitions") ||
+            node.containsKey("$defs") ||
+            node.containsKey("allOf") ||
+            node.containsKey("additionalProperties")) {
             return SchemaType.OBJECT;
         }
+
+        return SchemaType.ANY;
     }
 }

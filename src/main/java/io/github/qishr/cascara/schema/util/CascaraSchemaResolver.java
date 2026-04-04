@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -22,7 +21,6 @@ import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.schema.api.SchemaParser;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
-import io.github.qishr.cascara.schema.api.TypeAnalyzer;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.LazySchemaNode;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
@@ -31,8 +29,6 @@ import io.github.qishr.cascara.schema.internal.SchemaUtils;
 import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
 
 public class CascaraSchemaResolver implements SchemaResolver {
-    private static final String SCHEMA_SERVICE_URI = "cascara://core/schema-service/";
-
     private ContentLoader contentLoaderService;
     private final SchemaParser parserService;
 
@@ -57,23 +53,6 @@ public class CascaraSchemaResolver implements SchemaResolver {
     @Override
     public void registerSchemaNode(URI uri, SchemaNode node) {
         schemaNodeCache.put(uri, node);
-    }
-
-    @Override
-    public CompiledSchema getSchemaForClass(Class<?> clazz) throws SchemaException {
-        return getSchemaForClass(clazz, null);
-    }
-
-
-    @Override
-    public CompiledSchema getSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) throws SchemaException {
-        URI originUri = getSchemaUriForClass(clazz);
-        CompiledSchema schema = schemaDocCache.get(originUri);
-        if (schema == null) {
-            schema = generateSchemaForClass(clazz, typeAnalyzers);
-            schemaDocCache.put(originUri, schema);
-        }
-        return schema;
     }
 
     /// Returns the `CompiledSchema` indicated by the given `URI`.
@@ -206,12 +185,6 @@ public class CascaraSchemaResolver implements SchemaResolver {
     //
     //
 
-    private URI getSchemaUriForClass(Class<?> clazz) {
-        String origin = SCHEMA_SERVICE_URI + clazz.getName();
-        URI originUri = URI.create(origin);
-        return originUri;
-    }
-
     private SchemaNode resolveFragment(CompiledSchema schemaDoc, String fragment, DynamicScope scope) throws SchemaException {
         if (fragment == null || fragment.isEmpty() || fragment.equals("/")) {
             return updateScope(schemaDoc.getRoot(), scope);
@@ -323,23 +296,9 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return null;
     }
 
-    private CompiledSchema generateSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) throws SchemaException {
-        URI originUri = getSchemaUriForClass(clazz);
-        SchemaCompiler compiler = new CascaraSchemaCompiler(this);
-        ClassSchemaGenerator generator = new ClassSchemaGenerator();
-        if (typeAnalyzers != null) {
-            for (TypeAnalyzer ta : typeAnalyzers) {
-                generator.registerTypeAnalyzer(ta);
-            }
-        }
-        StructuredDocument schemaDoc = generator.generate(clazz);
-        CompiledSchema compiledSchema = compiler.compile(schemaDoc, originUri);
-        return compiledSchema;
-    }
-
     private URI stripFragment(URI uri) {
         try {
-            return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null);
+            return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), uri.getQuery(), null);
         } catch (Exception e) {
             return uri;
         }
@@ -348,6 +307,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
     private StructuredDocument parseContent(ResourceContent res) {
         if (res.contentType() == null || res.contentType().getId().contains("json")) {
             JsonParser parser = new JsonParser();
+            // System.out.println("\n === PARSING ===\n" + res.content());
             return parser.parse(res.content());
         } else {
             return parserService.parseContent(res);

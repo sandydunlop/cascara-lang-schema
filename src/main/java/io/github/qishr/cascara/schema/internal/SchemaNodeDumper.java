@@ -1,7 +1,7 @@
 package io.github.qishr.cascara.schema.internal;
 
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaType;
 
 public final class SchemaNodeDumper {
 
@@ -21,11 +21,6 @@ public final class SchemaNodeDumper {
 
         // Type
         indent(sb, indent + 1).append("type: ").append(node.getType()).append("\n");
-
-        // Reference
-        // if (node.getType() == SchemaType.REF) {
-        //     indent(sb, indent + 1).append("target: ").append(node.getRef()).append("\n");
-        // }
 
         // Object properties
         if (node.getType() == SchemaType.OBJECT) {

@@ -7,31 +7,26 @@ import io.github.qishr.cascara.schema.ast.*;
 
 import java.net.URI;
 import java.util.*;
-import java.util.Map.Entry;
 
 public final class CompiledSchema implements StructuredDocument {
 
-    private final String name;
-    private final ObjectSchemaNode root;
+    private final SchemaNode root;
+    private final URI originUri; // Store explicitly as the schema's identity
     private Map<String, SchemaNode> properties;
     private Map<String, SchemaNode> definitions;
 
-    public CompiledSchema(String name, ObjectSchemaNode root) {
-        this.name = name;
+    public CompiledSchema(URI originUri, SchemaNode root) {
+        this.originUri = originUri;
         this.root = root;
     }
 
-    //
-    // Properties
-    //
+    // --- Properties & Definitions ---
 
     private Map<String, SchemaNode> ensureProperties() {
         if (properties == null) {
             properties = new LinkedHashMap<>();
-            if (root != null) {
-                for (Entry<String, SchemaNode> prop : root.getProperties().entrySet()) {
-                    properties.put(prop.getKey(), prop.getValue());
-                }
+            if (root instanceof ObjectSchemaNode obj) {
+                properties.putAll(obj.getProperties());
             }
         }
         return properties;
@@ -41,21 +36,11 @@ public final class CompiledSchema implements StructuredDocument {
         return ensureProperties().values();
     }
 
-    public SchemaNode getProperty(String name) {
-        return ensureProperties().get(name);
-    }
-
-    //
-    // Definitions
-    //
-
     private Map<String, SchemaNode> ensureDefinitions() {
         if (definitions == null) {
             definitions = new LinkedHashMap<>();
             if (root != null) {
-                for (Entry<String, SchemaNode> prop : root.getDefinitions().entrySet()) {
-                    definitions.put(prop.getKey(), prop.getValue());
-                }
+                definitions.putAll(root.getDefinitions());
             }
         }
         return definitions;
@@ -65,39 +50,25 @@ public final class CompiledSchema implements StructuredDocument {
         return ensureDefinitions().values();
     }
 
-    public SchemaNode getDefinition(String name) {
-        return ensureDefinitions().get(name);
-    }
-
-    //
-    //
-    //
-
-    public String getName() {
-        return name;
-    }
-
-    public ObjectSchemaNode getRoot() {
+    public SchemaNode getRoot() {
         return root;
     }
+
+    @Override
+    public URI getOriginUri() {
+        return originUri;
+    }
+
+    public URI getId() {
+        return originUri;
+    }
+
+    // --- StructuredDocument Impl ---
 
     @Override public int getStartLine() { return 0; }
     @Override public int getStartColumn() {return 0; }
     @Override public int getEndLine() {return 0; }
     @Override public int getEndColumn() {return 0; }
-
-    @Override public URI getOriginUri() {
-        return root == null ? null : root.getOriginUri();
-    }
-
-    public URI getId() {
-        return root == null ? null : root.getOriginUri();
-    }
-
-    public void setId(URI id) {
-        if (root == null) throw new SchemaException("CompiledSchema has no root", "");
-        root.setOriginUri(id);
-    }
 
     @Override
     public List<? extends AstNode> getChildren() {
@@ -112,5 +83,23 @@ public final class CompiledSchema implements StructuredDocument {
     @Override
     public URI getSchemaUri() {
         return URI.create("https://json-schema.org/draft/2020-12/schema");
+    }
+
+    /**
+     * Convenience method to find a definition by name.
+     * Returns null if the definition doesn't exist.
+     */
+    public SchemaNode getDefinition(String name) {
+        if (name == null) return null;
+        return ensureDefinitions().get(name);
+    }
+
+    /**
+     * Convenience method to find a property by name.
+     * Only works if the root is an ObjectSchemaNode.
+     */
+    public SchemaNode getProperty(String name) {
+        if (name == null) return null;
+        return ensureProperties().get(name);
     }
 }

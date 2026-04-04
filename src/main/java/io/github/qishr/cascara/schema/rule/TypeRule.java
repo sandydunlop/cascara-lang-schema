@@ -2,7 +2,7 @@ package io.github.qishr.cascara.schema.rule;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.ScalarAstNode;
-import io.github.qishr.cascara.schema.ast.SchemaType;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.util.ValidationResult;
 
 public class TypeRule implements ValidationRule {

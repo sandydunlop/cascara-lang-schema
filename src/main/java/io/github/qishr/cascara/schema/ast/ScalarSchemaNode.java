@@ -3,12 +3,14 @@ package io.github.qishr.cascara.schema.ast;
 import java.util.Collections;
 import java.util.Map;
 
+import io.github.qishr.cascara.schema.SchemaType;
+
 public class ScalarSchemaNode extends BaseSchemaNode {
     private boolean primaryKey = false;
 
 
-    public ScalarSchemaNode(String name, SchemaType type) {
-        super(name, type);
+    public ScalarSchemaNode(SchemaType type, SchemaNode metaSchema) {
+        super(type, metaSchema);
     }
 
     @Override

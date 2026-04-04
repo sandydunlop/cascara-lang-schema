@@ -6,6 +6,7 @@ import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.api.SchemaCompiler;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.api.TypeAnalyzer;
@@ -32,18 +33,17 @@ public class SchemaBuilder {
         SimpleMapNode definitions = new SimpleMapNode();
         syntheticRoot = new SimpleMapNode();
 
-        // TODO: This should probably be "$defs"
-        syntheticRoot.put("definitions", definitions);
+        syntheticRoot.put(SchemaKeyword.DEFS.string(), definitions);
 
-        syntheticRoot.put("$id", new SimpleScalarNode(originUri));
+        syntheticRoot.put(SchemaKeyword.ID.string(), new SimpleScalarNode(originUri));
         syntheticRoot.put("name", new SimpleScalarNode(name));
 
         for (Class<?> cls : classes) {
             // Give the generator the synthentic root AST and
             // tell it where generated definitions go within it.
 
-            // TODO: This should probably be "#/$defs"
-            generator.generate(syntheticRoot, "#/definitions", cls);
+            String fragment = "#/" + SchemaKeyword.DEFS.string();
+            generator.generate(syntheticRoot, fragment, cls);
         }
 
         syntheticRootDoc = new SimpleDocument(syntheticRoot);

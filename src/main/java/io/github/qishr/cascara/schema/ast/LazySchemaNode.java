@@ -2,6 +2,7 @@ package io.github.qishr.cascara.schema.ast;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.schema.SchemaException;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
 import io.github.qishr.cascara.schema.util.DynamicScope;
@@ -20,11 +21,8 @@ public class LazySchemaNode extends BaseSchemaNode {
     private AstNode initialAst;
     private final DynamicScope capturedScope;
 
-    public LazySchemaNode(String ref, SchemaResolver resolver, SchemaNode root, URI originUri, AstNode originAst, DynamicScope scope) {
-        super(ref, null);
-        // if (root == null) {
-        //     throw new SchemaException("BUG: NULL ROOT", ref);
-        // }
+    public LazySchemaNode(String ref, SchemaResolver resolver, SchemaNode root, URI originUri, AstNode originAst, DynamicScope scope, SchemaNode metaSchema) {
+        super(null, metaSchema);
         this.ref = ref;
         this.resolver = resolver;
         this.root = root;
@@ -107,7 +105,6 @@ public class LazySchemaNode extends BaseSchemaNode {
         return resolved.getType();
     }
 
-    @Override public String getName() { return getResolved().getName(); }
     @Override public SchemaNode getProperty(String key) { return getResolved().getProperty(key); }
     @Override public Map<String, SchemaNode> getProperties() { return getResolved().getProperties(); }
     @Override public SchemaNode getItemSchema() { return getResolved().getItemSchema(); }

@@ -1,7 +1,7 @@
-package io.github.qishr.cascara.schema.ast;
+package io.github.qishr.cascara.schema;
 
 public enum SchemaType {
-    STRING, BOOLEAN, INTEGER, NUMBER, OBJECT, ARRAY, NULL;
+    ANY, STRING, BOOLEAN, INTEGER, NUMBER, OBJECT, ARRAY, NULL;
 
     public static SchemaType fromString(String type) {
         try {

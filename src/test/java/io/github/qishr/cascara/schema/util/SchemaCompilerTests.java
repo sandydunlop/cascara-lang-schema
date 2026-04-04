@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URI;
-
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
@@ -20,16 +18,7 @@ public class SchemaCompilerTests {
     private CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
     private CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
-    @Test
-    void test_name() {
-        SimpleMapNode properties = new SimpleMapNode();
-        SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode(URI.create("cascara://synthetic/Task")));
-        root.put("properties", properties);
 
-        CompiledSchema schema = compiler.compile(new SimpleDocument(root));
-        assertEquals("Task", schema.getRoot().getName());
-    }
 
     @Test
     void shouldCaptureUnevaluatedPropertiesAndTypedHints() {
@@ -62,7 +51,6 @@ public class SchemaCompilerTests {
 
         CompiledSchema compiled = compiler.compile(new SimpleDocument(root));
 
-        // Fix: Use .get() or .orElseThrow() for Optionals
         ObjectSchemaNode childNode = (ObjectSchemaNode) compiled.getRoot()
                 .getDefinition("child");
 

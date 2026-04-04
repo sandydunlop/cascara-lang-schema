@@ -3,7 +3,10 @@ package io.github.qishr.cascara.schema.util;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import io.github.qishr.cascara.schema.SchemaType;
+import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.rule.*;
 
 public final class SchemaNodeToPlain {
 
@@ -12,21 +15,43 @@ public final class SchemaNodeToPlain {
     }
 
     private Object toPlain(SchemaNode node, boolean isRoot) {
-        // REF nodes: emit $ref only, never descend
         if (node.isRef()) {
-            String ref = node.getRef();
-            return Map.of("$ref", ref != null ? ref : "#");
+            String refValue = node.getRef() != null ? node.getRef() : "#";
+            if (refValue.startsWith("#") && !refValue.contains("/")) {
+                return Map.of("$dynamicRef", refValue);
+            } else {
+                return Map.of("$ref", refValue);
+            }
         }
 
-        return switch (node.getType()) {
-            case STRING -> Map.of("type", "string");
-            case BOOLEAN -> Map.of("type", "boolean");
-            case INTEGER -> Map.of("type", "integer");
-            case NUMBER -> Map.of("type", "number");
-            case NULL -> Map.of("type", "integer");
-            case ARRAY -> serializeArray(node, isRoot);
-            case OBJECT -> serializeObject(node, isRoot);
+        SchemaType type = node.getType();
+        if (type == null || type == SchemaType.ANY) {
+            return serializeGeneric(node, isRoot);
+        }
+
+        return switch (type) {
+            case STRING  -> serializeScalar(node, "string");
+            case BOOLEAN -> serializeScalar(node, "boolean");
+            case INTEGER -> serializeScalar(node, "integer");
+            case NUMBER  -> serializeScalar(node, "number");
+            case NULL    -> serializeScalar(node, "null");
+            case ARRAY   -> serializeArray(node, isRoot);
+            case OBJECT  -> serializeObject(node, isRoot);
+            default      -> serializeGeneric(node, isRoot);
         };
+    }
+
+    private Map<String, Object> serializeScalar(SchemaNode node, String typeName) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("type", typeName);
+        applyMetadataAndRules(node, map);
+        return map;
+    }
+
+    private Map<String, Object> serializeGeneric(SchemaNode node, boolean isRoot) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        applyMetadataAndRules(node, map);
+        return map;
     }
 
     private Map<String, Object> serializeObject(SchemaNode node, boolean isRoot) {
@@ -34,25 +59,31 @@ public final class SchemaNodeToPlain {
         map.put("type", "object");
 
         // properties
-        Map<String, Object> props = new LinkedHashMap<>();
-        for (var entry : node.getProperties().entrySet()) {
-            props.put(entry.getKey(), toPlain(entry.getValue(), false));
+        if (!node.getProperties().isEmpty()) {
+            Map<String, Object> props = new LinkedHashMap<>();
+            for (var entry : node.getProperties().entrySet()) {
+                props.put(entry.getKey(), toPlain(entry.getValue(), false));
+            }
+            map.put("properties", props);
         }
-        map.put("properties", props);
 
-        // metadata
-        if (node.getTitle() != null) map.put("title", node.getTitle());
-        if (node.getDescription() != null) map.put("description", node.getDescription());
+        // NEW: handle additionalProperties as Schema
+        if (node instanceof ObjectSchemaNode obj) {
+            if (obj.getAdditionalPropertiesSchema() != null) {
+                map.put("additionalProperties", toPlain(obj.getAdditionalPropertiesSchema(), false));
+            } else if (!obj.areAdditionalPropertiesAllowed()) {
+                map.put("additionalProperties", false);
+            }
+        }
 
-        // definitions only at root
+        applyMetadataAndRules(node, map);
+
         if (isRoot && !node.getDefinitions().isEmpty()) {
             Map<String, Object> defs = new LinkedHashMap<>();
             for (var entry : node.getDefinitions().entrySet()) {
                 defs.put(entry.getKey(), toPlain(entry.getValue(), false));
             }
-
-            // TODO: This should probably be "$defs"
-            map.put("definitions", defs);
+            map.put("$defs", defs);
         }
 
         return map;
@@ -67,6 +98,35 @@ public final class SchemaNodeToPlain {
             map.put("items", toPlain(item, false));
         }
 
+        applyMetadataAndRules(node, map);
         return map;
+    }
+
+    private void applyMetadataAndRules(SchemaNode node, Map<String, Object> target) {
+        if (node.getDynamicAnchor() != null) target.put("$dynamicAnchor", node.getDynamicAnchor());
+        if (node.getTitle() != null) target.put("title", node.getTitle());
+        if (node.getDescription() != null) target.put("description", node.getDescription());
+        if (node.getDefaultValue() != null) target.put("default", node.getDefaultValue());
+
+        applyRulesToMap(node, target);
+        target.putAll(node.getExtensions());
+    }
+
+    private void applyRulesToMap(SchemaNode node, Map<String, Object> target) {
+        for (ValidationRule rule : node.getRules()) {
+            if (rule instanceof EnumRule er) {
+                target.put("enum", er.getAllowedValues());
+            } else if (rule instanceof MinValueRule min) {
+                target.put("minimum", min.getMin());
+            } else if (rule instanceof MaxValueRule max) {
+                target.put("maximum", max.getMax());
+            } else if (rule instanceof RequiredRule req) {
+                target.put("required", req.getRequiredKeys());
+            } else if (rule instanceof MinItemsRule minI) {
+                target.put("minItems", minI.getMinItems());
+            } else if (rule instanceof MaxItemsRule maxI) {
+                target.put("maxItems", maxI.getMaxItems());
+            }
+        }
     }
 }

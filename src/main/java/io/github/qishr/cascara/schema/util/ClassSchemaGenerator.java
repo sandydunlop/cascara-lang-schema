@@ -35,7 +35,7 @@ public final class ClassSchemaGenerator {
 
     private boolean multiClassDocument = false;
     private SimpleMapNode definitionsContainer;
-    private String definitionsLocation = "#/definitions/";
+    private String definitionsLocation = "#/" + SchemaKeyword.DEFS.string();
 
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
         typeAnalyzers.add(ta);
@@ -86,7 +86,7 @@ public final class ClassSchemaGenerator {
                     String defName = e.getKey().getSimpleName();
                     defsNode.put(defName, e.getValue());
                 }
-                classRoot.put("definitions", defsNode);
+                classRoot.put(SchemaKeyword.DEFS.string(), defsNode);
             }
         }
         return new SimpleDocument(classRoot);
@@ -229,7 +229,7 @@ public final class ClassSchemaGenerator {
 
     private void applyInternalRef(SimpleMapNode node, Class<?> target) {
         ensureDefinition(target);
-        node.put("$ref", scalar(definitionsLocation + target.getSimpleName()));
+        node.put("$ref", scalar(definitionsLocation + "/" + target.getSimpleName()));
     }
 
     private void ensureDefinition(Class<?> clazz) {

@@ -1,5 +1,6 @@
 package io.github.qishr.cascara.schema;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,16 +57,10 @@ public class SimpleEntityTests {
         // Collection reference
         assertTrue(children instanceof ArraySchemaNode);
 
-        // ArraySchemaNode arr = (ArraySchemaNode) children;
+        ArraySchemaNode arr = (ArraySchemaNode) children;
 
-        // Item template is a single reference
-        // assertTrue(arr.getItemTemplate() instanceof ReferenceSchemaNode);
-        // assertFalse(((ReferenceSchemaNode) arr.getItemTemplate()).isCollection());
-
-        // TODO: Fix this
-        // assertTrue(arr.getItemTemplate() instanceof ReferenceSchemaNode);
-        // assertEquals("RefEntity", ((ReferenceSchemaNode) arr.getItemTemplate()).getTargetType());
-
+        assertTrue(arr.getItemSchema() instanceof LazySchemaNode);
+        assertEquals(SchemaType.OBJECT, ((LazySchemaNode) arr.getItemSchema()).getType());
     }
 
 

@@ -69,7 +69,7 @@ class ClassSchemaGeneratorTest {
         assertNotNull(child);
 
         // Nested objects become references
-        assertEquals("#/definitions/SimpleEntity", child.getString("$ref"));
+        assertEquals("#/$defs/SimpleEntity", child.getString("$ref"));
         // assertEquals("SimpleEntity", child.getString("target"));
     }
 
@@ -165,7 +165,7 @@ class ClassSchemaGeneratorTest {
         var props = (SimpleMapNode) root.get("properties");
         var address = (SimpleMapNode) props.get("address");
 
-        assertEquals("#/definitions/Address", address.getString("$ref"));
+        assertEquals("#/$defs/Address", address.getString("$ref"));
         // assertEquals("Address", address.getString("target"));
     }
 
@@ -186,7 +186,7 @@ class ClassSchemaGeneratorTest {
         assertEquals("array", tags.getString("type"));
 
         var items = (SimpleMapNode) tags.get("items");
-        assertEquals("#/definitions/Tag", items.getString("$ref"));
+        assertEquals("#/$defs/Tag", items.getString("$ref"));
         // assertEquals("Tag", items.getString("target"));
     }
 
@@ -213,14 +213,14 @@ class ClassSchemaGeneratorTest {
 
         // reference
         var address = (SimpleMapNode) props.get("address");
-        assertEquals("#/definitions/Address", address.getString("$ref"));
+        assertEquals("#/$defs/Address", address.getString("$ref"));
         // assertEquals("Address", address.getString("target"));
 
         // array of references
         var tags = (SimpleMapNode) props.get("tags");
         assertEquals("array", tags.getString("type"));
         var items = (SimpleMapNode) tags.get("items");
-        assertEquals("#/definitions/Tag", items.getString("$ref"));
+        assertEquals("#/$defs/Tag", items.getString("$ref"));
         // assertEquals("Tag", items.getString("target"));
     }
 

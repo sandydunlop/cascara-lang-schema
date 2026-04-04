@@ -2,6 +2,7 @@ package io.github.qishr.cascara.schema.ast;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.util.ValidationResult;
 
 import java.util.*;
@@ -9,8 +10,8 @@ import java.util.*;
 public class ArraySchemaNode extends BaseSchemaNode {
     private SchemaNode items; // This is our Item Template
 
-    public ArraySchemaNode(String name) {
-        super(name, SchemaType.ARRAY);
+    public ArraySchemaNode(SchemaNode metaSchema) {
+        super(SchemaType.ARRAY, metaSchema);
     }
 
     public SchemaNode getItemSchema() {

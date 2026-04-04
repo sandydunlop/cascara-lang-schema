@@ -1,0 +1,39 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.compile.nullAnalysis.mode": "automatic",
+
+    "java.test.config": {
+        "modulePaths": ["${workspaceFolder}/build/modulepath"],
+        "module": "cascara.studio",
+        "vmArgs": [
+            "--module-path",
+            "${workspaceFolder}/build/modulepath",
+            // "--add-reads", "cascara.studio=org.junit.platform.console.standalone",
+
+            // "--add-reads", "cascara.lang.java=ALL-UNNAMED",
+            // "--add-reads", "cascara.lang.java=ALL-SYSTEM",
+            // "--add-reads", "cascara.lang.java=ALL-MODULE-PATH",
+        ],
+        "java.project.referencedLibraries": [
+            "${workspaceFolder}/build/modulepath/*.jar"
+        ]
+    },
+
+
+    // "java.test.config": {
+    //     "modulePaths": ["${workspaceFolder}/cascara-studio/build/modulepath"],
+    //     "module": "cascara.studio",
+    //     "vmArgs": [
+    //         "--module-path",
+    //         "${workspaceFolder}/cascara-studio/build/modulepath",
+    //         // "--add-reads", "cascara.studio=org.junit.platform.console.standalone",
+
+    //         // "--add-reads", "cascara.lang.java=ALL-UNNAMED",
+    //         // "--add-reads", "cascara.lang.java=ALL-SYSTEM",
+    //         // "--add-reads", "cascara.lang.java=ALL-MODULE-PATH",
+    //     ],
+    //     "java.project.referencedLibraries": [
+    //         "${workspaceFolder}/cascara-studio/build/modulepath/*.jar"
+    //     ]
+    // },
+}

@@ -1,0 +1,74 @@
+{
+    "$id": "cascara://core/schema-service/entities",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$defs": {
+      "status": {
+        "type": "object",
+        "x-entity": "status_metadata",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Internal Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "color": {
+            "type": "string",
+            "format": "color"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Sort Order"
+          }
+        }
+      },
+      "item": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "docId": {
+            "type": "string",
+            "title": "Hex Permalink ID",
+            "x-indexed": {
+              "name": "idx_doc_id",
+              "unique": true
+            }
+          },
+          "timestampCreated": {
+            "type": "integer"
+          },
+          "timestampUpdated": {
+            "type": "integer"
+          }
+        }
+      },
+      "task": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/item"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/$defs/status",
+            "x-tracked": true
+          },
+          "assigneeId": {
+            "type": "string",
+            "x-tracked": true
+          }
+        }
+      }
+    }
+  }

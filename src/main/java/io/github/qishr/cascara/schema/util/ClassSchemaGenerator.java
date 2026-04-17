@@ -10,7 +10,6 @@ import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.annotation.ContentMediaType;
 import io.github.qishr.cascara.schema.annotation.SchemaDefinition;
 import io.github.qishr.cascara.schema.api.TypeAnalyzer;
-import io.github.qishr.cascara.schema.constraint.Hidden;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
 import io.github.qishr.cascara.schema.internal.SchemaUtils;
@@ -41,15 +40,23 @@ public final class ClassSchemaGenerator {
         typeAnalyzers.add(ta);
     }
 
+    public SimpleDocument generate(Object template) {
+        return generate(null, null, null, template);
+    }
+
     public SimpleDocument generate(Class<?> clazz) {
-        return generate(null, null, clazz);
+        return generate(null, null, clazz, null);
     }
 
     public SimpleDocument generate(SimpleMapNode parentDoc, Class<?> clazz) {
-        return generate(parentDoc, null, clazz);
+        return generate(parentDoc, null, clazz, null);
     }
 
     public SimpleDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz) {
+        return generate(parentDoc, fragment, clazz, null);
+    }
+
+    public SimpleDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
         processingStack.clear();
         definitions.clear();
         multiClassDocument = false;
@@ -71,7 +78,7 @@ public final class ClassSchemaGenerator {
             }
         }
 
-        SimpleMapNode classRoot = generateClassRoot(clazz);
+        SimpleMapNode classRoot = generateClassRoot(clazz, template);
 
         if (multiClassDocument) {
             for (Map.Entry<Class<?>, SimpleMapNode> e : definitions.entrySet()) {
@@ -92,7 +99,10 @@ public final class ClassSchemaGenerator {
         return new SimpleDocument(classRoot);
     }
 
-    private SimpleMapNode generateClassRoot(Class<?> clazz) {
+    private SimpleMapNode generateClassRoot(Class<?> clazz, Object template) {
+        if (clazz == null) {
+            clazz = template.getClass();
+        }
         SimpleMapNode root = new SimpleMapNode();
         root.put("name", scalar(clazz.getSimpleName()));
         fillObjectMetadata(clazz, root);
@@ -103,7 +113,9 @@ public final class ClassSchemaGenerator {
 
         properties.put("id", createIdFieldNode());
 
-        Object template = instantiate(clazz);
+        if (template == null) {
+            template = instantiate(clazz);
+        }
         for (Field field : getAllFields(clazz)) {
             if (shouldInclude(field)) {
                 properties.put(resolveFieldName(field), createFieldNode(field, template));
@@ -292,46 +304,16 @@ public final class ClassSchemaGenerator {
         if (field.isAnnotationPresent(StringConstraint.class)) {
             StringConstraint sc = field.getAnnotation(StringConstraint.class);
 
-            // TODO: These are custom extensions. They should perhaps be handled by a TypeAnalyzer
-            if (!sc.provider().isEmpty()) node.put("x-provider", scalar(sc.provider()));
-            if (!sc.parameter().isEmpty()) node.put("x-parameter", scalar(sc.parameter()));
-
             if (sc.options().length > 0) {
                 SimpleSequenceNode enumNode = new SimpleSequenceNode();
                 for (String opt : sc.options()) enumNode.add(scalar(opt));
                 node.put("enum", enumNode);
             }
         }
-
-
-
-
-
-        // if (field.isAnnotationPresent(FileConstraint.class)) {
-        //     FileConstraint fc = field.getAnnotation(FileConstraint.class);
-
-        //     node.put("format", scalar("path"));
-        //     node.put("absolute", scalar(fc.absolute()));
-
-        //     if (fc.extensions().length > 0) {
-        //         SimpleSequenceNode extNode = new SimpleSequenceNode();
-        //         for (String ext : fc.extensions()) extNode.add(scalar(ext));
-        //         node.put("extensions", extNode);
-        //     }
-        // }
-
-
-
-
-
-
         if (field.isAnnotationPresent(ReadOnly.class)) {
             node.put("readOnly", scalar(true));
         }
-
-        if (field.isAnnotationPresent(Hidden.class)) {
-            node.put("x-hidden", scalar(true));
-        }
+        // TODO: Range, number, enum, etc
     }
 
     private void appendDefaultValue(SimpleMapNode node, Field field, Object instance) {

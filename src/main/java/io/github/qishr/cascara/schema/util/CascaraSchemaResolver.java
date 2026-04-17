@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import io.github.qishr.cascara.common.content.ContentLoader;
 import io.github.qishr.cascara.common.content.ResourceContent;
@@ -216,48 +219,102 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return updateScope(found, scope);
     }
 
+    // private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst) {
+    //     return findNodeByAst(root, targetAst, 0);
+    // }
+
+    // private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst, int depth) {
+    //     if (root == null || targetAst == null) return null;
+
+    //     // 1. Double-Identity Check
+    //     // Check the current identity (Proxy/Resolved)
+    //     boolean matchesCurrent = root.getOriginAst() == targetAst;
+
+    //     // Check the original identity (Definition/Lazy Placeholder)
+    //     boolean matchesOriginal = (root instanceof LazySchemaNode lazy) &&
+    //                               lazy.getInitialAst() == targetAst;
+
+    //     if (matchesCurrent || matchesOriginal) {
+    //         return root;
+    //     }
+
+    //     // 2. Traversal (Peeking)
+    //     if (root instanceof LazySchemaNode lazy) {
+    //         SchemaNode internal = lazy.peekResolved();
+    //         if (internal != null && internal != root) {
+    //             return findNodeByAst(internal, targetAst, depth + 1); // INFINITE LOOP
+    //         }
+    //         return null;
+    //     }
+
+    //     // 3. Concrete Traversal (Safe, these are already-built maps)
+    //     if (root instanceof ObjectSchemaNode obj) {
+    //         for (SchemaNode def : obj.getDefinitions().values()) {
+    //             SchemaNode found = findNodeByAst(def, targetAst, depth + 1);
+    //             if (found != null) return found;
+    //         }
+    //         for (SchemaNode prop : obj.getProperties().values()) {
+    //             SchemaNode found = findNodeByAst(prop, targetAst, depth + 1);
+    //             if (found != null) return found;
+    //         }
+    //     }
+
+    //     if (root instanceof ArraySchemaNode arr) {
+    //         return findNodeByAst(arr.getItemSchema(), targetAst, depth + 1); // INFINITE LOOP
+    //     }
+
+    //     return null;
+    // }
+
     private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst) {
-        return findNodeByAst(root, targetAst, 0);
+        // We use a set that uses reference equality (==) instead of .equals()
+        return findNodeByAst(root, targetAst, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
     }
 
-    private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst, int depth) {
+    private SchemaNode findNodeByAst(SchemaNode root, AstNode targetAst, int depth, Set<SchemaNode> visited) {
         if (root == null || targetAst == null) return null;
 
-        // 1. Double-Identity Check
-        // Check the current identity (Proxy/Resolved)
-        boolean matchesCurrent = root.getOriginAst() == targetAst;
+        // 1. Check if we've seen THIS specific instance before
+        if (visited.contains(root)) {
+            return null;
+        }
+        visited.add(root);
 
-        // Check the original identity (Definition/Lazy Placeholder)
+        // 2. Identity Check
+        boolean matchesCurrent = root.getOriginAst() == targetAst;
         boolean matchesOriginal = (root instanceof LazySchemaNode lazy) &&
-                                  lazy.getInitialAst() == targetAst;
+                                lazy.getInitialAst() == targetAst;
 
         if (matchesCurrent || matchesOriginal) {
             return root;
         }
 
-        // 2. Traversal (Peeking)
+        // 3. Traversal (Peeking)
         if (root instanceof LazySchemaNode lazy) {
             SchemaNode internal = lazy.peekResolved();
+            // If it's already resolved, search inside the resolution
             if (internal != null && internal != root) {
-                return findNodeByAst(internal, targetAst, depth + 1);
+                return findNodeByAst(internal, targetAst, depth + 1, visited);
             }
             return null;
         }
 
-        // 3. Concrete Traversal (Safe, these are already-built maps)
+        // 4. Concrete Traversal
         if (root instanceof ObjectSchemaNode obj) {
+            // Definitions usually contain the circular targets
             for (SchemaNode def : obj.getDefinitions().values()) {
-                SchemaNode found = findNodeByAst(def, targetAst, depth + 1);
+                SchemaNode found = findNodeByAst(def, targetAst, depth + 1, visited);
                 if (found != null) return found;
             }
             for (SchemaNode prop : obj.getProperties().values()) {
-                SchemaNode found = findNodeByAst(prop, targetAst, depth + 1);
+                SchemaNode found = findNodeByAst(prop, targetAst, depth + 1, visited);
                 if (found != null) return found;
             }
         }
 
         if (root instanceof ArraySchemaNode arr) {
-            return findNodeByAst(arr.getItemSchema(), targetAst, depth + 1);
+            // This is where workItem -> sprint -> workItem loop triggers
+            return findNodeByAst(arr.getItemSchema(), targetAst, depth + 1, visited);
         }
 
         return null;

@@ -96,14 +96,14 @@ public final class CascaraSchemaDecompiler {
                     yield object(o);
                 }
                 else if (compiled instanceof LazySchemaNode lazy) {
-                    SimpleMapNode map = new SimpleMapNode();
+                    // SimpleMapNode map = new SimpleMapNode();
                     // String reference = bridge.getRef();
 
                     SimpleMapNode refMap = new SimpleMapNode();
                     String ref = lazy.getRef();
                     String refKey = (ref != null && ref.startsWith("#") && !ref.contains("/")) ? DYNAMIC_REF : REF;
                     refMap.put(refKey, scalarValue(ref));
-                    yield map;
+                    yield refMap;
                 }
                 else {
                     yield null;
@@ -129,10 +129,6 @@ public final class CascaraSchemaDecompiler {
     private SimpleMapNode object(ObjectSchemaNode object) throws SchemaException {
         SimpleMapNode map = new SimpleMapNode();
         map.put(TYPE, scalarValue(OBJECT));
-
-        // if (object.getName() != null && !object.getName().isEmpty()) {
-        //     map.put("name", scalarValue(object.getName()));
-        // }
 
         // definitions
         if (!object.getDefinitions().isEmpty()) {

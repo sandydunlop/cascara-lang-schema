@@ -18,7 +18,7 @@ public class CompilerTests {
     void compiler_shouldPreserveCustomMetadata() {
         String json = """
         {
-        "$id": "cascara://test",
+        "$id": "cascara://core/schema-service/draft/cascara.schema/compiler-tests/0.1.0",
         "definitions": {
             "item": { "type": "object", "properties": { "status": { "type": "string", "x-tracked": true } } },
             "task": { "x-parent": "item", "type": "object", "properties": { "name": { "type": "string" } } }

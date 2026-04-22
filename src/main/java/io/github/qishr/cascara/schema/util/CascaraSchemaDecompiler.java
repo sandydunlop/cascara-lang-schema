@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.github.qishr.cascara.common.lang.ast.QuoteStyle;
+import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapEntryNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
@@ -46,7 +47,7 @@ public final class CascaraSchemaDecompiler {
     private static final String DYNAMIC_ANCHOR = "$dynamicAnchor";
     private static final String DYNAMIC_REF = "$dynamicRef";
 
-    public SimpleMapNode decompile(CompiledSchema compiled) {
+    public SimpleDocument decompile(CompiledSchema compiled) {
         if (compiled == null || compiled.getRoot() == null) return null;
 
         SchemaNode compiledRoot = compiled.getRoot();
@@ -67,7 +68,7 @@ public final class CascaraSchemaDecompiler {
         for (SimpleMapEntryNode entry : decompiled.getEntries()) {
             root.put(entry.getKey(), entry.getValue());
         }
-        return root;
+        return new SimpleDocument(root);
     }
 
     private SimpleMapNode decompileInternal(SchemaNode compiled) throws SchemaException {

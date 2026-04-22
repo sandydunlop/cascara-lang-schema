@@ -1,5 +1,5 @@
 {
-    "$id": "cascara://core/schema-service/entities",
+    "$id": "cascara://core/schema-service/draft/cascara.schema/util-tests/0.1.0",
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$defs": {
       "status": {

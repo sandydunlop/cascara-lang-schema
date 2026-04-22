@@ -16,7 +16,7 @@ import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
 public class UriTests {
     @Test
     void test_id() {
-        URI uri = URI.create("cascara://invalid");
+        URI uri = URI.create("cascara://core/schema-service/draft/cascara.schema/uri-tests/0.1.0");
         SimpleScalarNode id = new SimpleScalarNode(uri);
         SimpleMapNode root = new SimpleMapNode();
         root.put("$id", id);

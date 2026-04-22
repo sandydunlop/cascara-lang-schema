@@ -46,7 +46,7 @@ public class SchemaCompilerTests {
         defs.put("child", childDef);
 
         SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode("cascara://test"));
+        root.put("$id", new SimpleScalarNode("cascara://core/schema-service/draft/cascara.schema/compiler-unevaluated-test/0.1.0"));
         root.put("definitions", defs);
 
         CompiledSchema compiled = compiler.compile(new SimpleDocument(root));
@@ -88,7 +88,7 @@ public class SchemaCompilerTests {
         defs.put("child", childDef);
 
         SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode("cascara://test"));
+        root.put("$id", new SimpleScalarNode("cascara://core/schema-service/draft/cascara.schema/compiler-flatten-test/0.1.0"));
         root.put("definitions", defs);
 
         CompiledSchema compiled = compiler.compile(new SimpleDocument(root));
@@ -104,7 +104,7 @@ public class SchemaCompilerTests {
     @Test
     void shouldRespectAdditionalPropertiesFalse() {
         SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode("cascara://test"));
+        root.put("$id", new SimpleScalarNode("cascara://core/schema-service/draft/cascara.schema/compiler-additional-properties-test/0.1.0"));
         root.put("type", new SimpleScalarNode("object"));
         root.put("additionalProperties", new SimpleScalarNode(false));
 

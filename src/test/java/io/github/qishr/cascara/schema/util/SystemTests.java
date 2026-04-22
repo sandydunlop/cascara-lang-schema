@@ -35,7 +35,7 @@ public class SystemTests {
 
         String json = """
             {
-                "$id": "cascara://core/test/entities",
+                "$id": "cascara://core/schema-service/draft/cascara.schema/entities/0.1.0",
                 "$schema": "cascara://core/schema-service/cascara.persistence.cema/cema-meta",
                 "$defs": {
                   "tag": {
@@ -121,7 +121,7 @@ public class SystemTests {
 
         String json = """
             {
-              "$id": "cascara://core/schema-service/schema/organizer/entities",
+              "$id": "cascara://core/schema-service/draft/cascara.schema/entities/0.1.0",
               "$schema": "cascara://core/schema-service/cascara.persistence.cema/cema-meta",
               "$defs": {
                 "module": {
@@ -192,7 +192,7 @@ public class SystemTests {
         JsonDocument doc = new JsonParser().parse(json);
         CompiledSchema compiled = compiler.compile(doc);
         CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
-        MapAstNode<?,?> root = decompiler.decompile(compiled);
+        MapAstNode<?,?> root = decompiler.decompile(compiled).getRoot();
         if (root.get("$defs") instanceof MapAstNode defs) {
             if (defs.get("releasedModule") instanceof MapAstNode rm) {
                 if (rm.get("properties") instanceof MapAstNode properties) {

@@ -38,13 +38,13 @@ public class SchemaResolverTests {
     StructuredDocument createTagDoc() {
         // SimpleScalarNode id =
         SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode(URI.create("cascara://synthetic/Tag")));
+        root.put("$id", new SimpleScalarNode(URI.create("cascara://core/schema-service/draft/cascara.schema/Tag/0.1.0")));
         return new SimpleDocument(root);
     }
 
     StructuredDocument createTaskDoc() {
         SimpleMapNode items = new SimpleMapNode();
-        items.put("$ref", new SimpleScalarNode(URI.create("cascara://synthetic/Tag")));
+        items.put("$ref", new SimpleScalarNode(URI.create("cascara://core/schema-service/draft/cascara.schema/Tag/0.1.0")));
 
         SimpleMapNode tags = new SimpleMapNode();
         tags.put("type", new SimpleScalarNode("array"));
@@ -54,7 +54,7 @@ public class SchemaResolverTests {
         properties.put("tags", tags);
 
         SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode(URI.create("cascara://synthetic/Task")));
+        root.put("$id", new SimpleScalarNode(URI.create("cascara://core/schema-service/draft/cascara.schema/Task/0.1.0")));
         root.put("properties", properties);
         return new SimpleDocument(root);
     }
@@ -77,7 +77,7 @@ public class SchemaResolverTests {
     void shouldResolveInternalReferencesDuringInheritance() {
         String json = """
             {
-                "$id": "cascara://test/items",
+                "$id": "cascara://core/schema-service/draft/cascara.schema/items/0.1.0",
                 "definitions": {
                   "bug": {
                     "type": "object",
@@ -142,10 +142,10 @@ public class SchemaResolverTests {
     @DisplayName("Should handle JSON-backed StructuredDocument without ClassCastException")
     void shouldHandleJsonBackedDocument() {
         // 1. Setup a JSON document
-        String json = "{ \"$id\": \"cascara://test/json\", \"type\": \"object\" }";
+        String json = "{ \"$id\": \"cascara://core/schema-service/draft/cascara.schema/json/0.1.0\", \"type\": \"object\" }";
         JsonParser parser = new JsonParser();
         StructuredDocument doc = parser.parse(json);
-        URI uri = URI.create("cascara://test/json");
+        URI uri = URI.create("cascara://core/schema-service/draft/cascara.schema/json/0.1.0");
 
         // 2. Register it as a compiled schema (simulating what the compiler does)
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
@@ -163,10 +163,10 @@ public class SchemaResolverTests {
     @Test
     @DisplayName("Should maintain synchronization between SchemaDoc and SchemaNode caches")
     void shouldKeepCachesInSync() {
-        URI docUri = URI.create("cascara://test/sync");
+        URI docUri = URI.create("cascara://core/schema-service/draft/cascara.schema/sync/0.1.0");
         String json = """
             {
-              "$id": "cascara://test/sync",
+              "$id": "cascara://core/schema-service/draft/cascara.schema/sync/0.1.0",
               "definitions": {
                 "item": { "$anchor": "main-item", "type": "string" }
               }
@@ -314,7 +314,7 @@ public class SchemaResolverTests {
 
         // 3. DECOMPILE: Move from Compiled Graph back to AST
         CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
-        SimpleMapNode decompiledAst = (SimpleMapNode) decompiler.decompile(original);
+        SimpleMapNode decompiledAst = decompiler.decompile(original).getRoot();
 
         // 4. RE-COMPILE: Re-hydrate the AST back into a Compiled Schema
         // This is where the Migration Service was failing

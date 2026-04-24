@@ -6,13 +6,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import io.github.qishr.cascara.common.content.ContentType;
-import io.github.qishr.cascara.common.content.ResourceContent;
+import io.github.qishr.cascara.common.io.ResourceContent;
 import io.github.qishr.cascara.common.lang.processor.AstConverter;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.spi.AstConverterFactory;
 import io.github.qishr.cascara.common.spi.ContentTypes;
+import io.github.qishr.cascara.lang.json.processor.JsonConverter;
 import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.SchemaException;
+import io.github.qishr.cascara.schema.util.CascaraSchemaUri.Lifecycle;
 
 public class SchemaStore {
 
@@ -27,37 +29,45 @@ public class SchemaStore {
         return instance;
     }
 
-    public ResourceContent get(CascaraSchemaUri uri) throws SchemaException {
+    public ResourceContent get(CascaraSchemaUri schemaUri) throws SchemaException {
         // TODO:
         // prevent ../../ being used to look outside the store
 
-        Path schemaFile = getPath(uri).resolve("schema.json");
+        if (schemaUri.getLifecycle() == Lifecycle.DYNAMIC) {
+            throw illegalLifecycle(schemaUri);
+        }
+
+        Path schemaFile = getPath(schemaUri).resolve("schema.json");
         if (!Files.exists(schemaFile)) {
-            throw notFound(uri);
+            throw notFound(schemaUri);
         }
 
         String schemaSource;
         try {
             schemaSource = Files.readString(schemaFile);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            throw new SchemaException(e.getMessage(), e, uri.getUri());
+            throw new SchemaException(e.getMessage(), e, schemaUri.toUri());
         }
 
-        ContentType contentType = ContentTypes.find("application/json+schema");
+        ContentType contentType = ContentTypes.find("application/schema+json");
         ResourceContent rc = new ResourceContent(schemaSource, contentType);
         return rc;
     }
 
-    public void put(CascaraSchemaUri uri, CompiledSchema compiled) {
+    public void put(CascaraSchemaUri schemaUri, CompiledSchema compiled) {
+        if (schemaUri.getLifecycle() == Lifecycle.DYNAMIC) {
+            throw illegalLifecycle(schemaUri);
+        }
+
         CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
         StructuredDocument doc = decompiler.decompile(compiled);
 
-        AstConverter<?> converter = new AstConverterFactory().create("application/json+schema");
-        String schemaString = converter.toText(doc.getRoot());
+        // AstConverter<?> converter = new AstConverterFactory().create("application/schema+json");
+        // String schemaString = converter.toText(doc.getRoot());
 
-        Path schemaDir = getPath(uri);
+        String schemaString = new JsonConverter().toText(doc.getRoot());
+
+        Path schemaDir = getPath(schemaUri);
         try {
             if (!Files.exists(schemaDir)) {
                 Files.createDirectories(schemaDir);
@@ -66,24 +76,28 @@ public class SchemaStore {
             Files.writeString(path, schemaString);
         } catch (IOException e) {
             e.printStackTrace();
-            throw new SchemaException("Failed to store schema: " + e.getMessage(), e, uri.getUri());
+            throw new SchemaException("Failed to store schema: " + e.getMessage(), e, schemaUri.toUri());
         }
     }
 
-    private Path getPath(CascaraSchemaUri uri) throws SchemaException {
-        Path schemaDir = schemasDir.resolve(uri.getModuleName(), uri.getSchemaName());
+    private Path getPath(CascaraSchemaUri schemaUri) throws SchemaException {
+        Path schemaDir = schemasDir.resolve(schemaUri.getModuleName(), schemaUri.getSchemaName());
 
         Path versionDir;
-        if (uri.getVersion() == null) {
+        if (schemaUri.getLifecycle() == Lifecycle.RESOURCE) {
             // TODO: Find latest version
-            throw new SchemaException("Unimplemented - no version", "");
+            throw new SchemaException("Unimplemented: Lifecycle.RESOURCE", schemaUri.toUri());
         } else {
-            versionDir = schemaDir.resolve(uri.getVersion());
+            versionDir = schemaDir.resolve(schemaUri.getVersion());
             return versionDir;
         }
     }
 
     private SchemaException notFound(CascaraSchemaUri uri) {
-        return new SchemaException("Schema not found", uri.getUri());
+        return new SchemaException("Schema not found", uri.toUri());
+    }
+
+    private SchemaException illegalLifecycle(CascaraSchemaUri schemaUri) {
+        return new SchemaException("Dynamic Lifecycle not allowed in SchemaStore", schemaUri.toUri());
     }
 }

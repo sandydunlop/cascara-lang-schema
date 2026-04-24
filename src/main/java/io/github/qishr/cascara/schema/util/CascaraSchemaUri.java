@@ -4,10 +4,10 @@ import java.net.URI;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import io.github.qishr.cascara.common.content.ResourceContent;
 import io.github.qishr.cascara.schema.SchemaException;
 
 public class CascaraSchemaUri {
+    public static final String SCHEMA_SERVICE_URI = "cascara://core/schema-service";
 
     public static enum Lifecycle {
         DYNAMIC,
@@ -15,14 +15,28 @@ public class CascaraSchemaUri {
         RESOURCE
     }
 
-    private final URI uri;
     private final Lifecycle lifecycle;
     private final String moduleName;
     private final String schemaName;
     private final String version;
 
-    private CascaraSchemaUri(URI uri, Lifecycle lifecycle, String moduleName, String schemaName, String version) {
-        this.uri = uri;
+    public CascaraSchemaUri(Class<?> clazz) {
+        this(Lifecycle.DYNAMIC, clazz.getModule().getName(), clazz.getName(), null);
+    }
+
+    public CascaraSchemaUri(String moduleName, String schemaName, String version) {
+        this(Lifecycle.DRAFT, moduleName, schemaName, version);
+    }
+
+    public CascaraSchemaUri(String moduleName, String schemaName) {
+        this(Lifecycle.RESOURCE, moduleName, schemaName, null);
+    }
+
+    public CascaraSchemaUri(String schemaName) {
+        this(Lifecycle.DYNAMIC, "-", schemaName, null);
+    }
+
+    private CascaraSchemaUri(Lifecycle lifecycle, String moduleName, String schemaName, String version) {
         this.lifecycle = lifecycle;
         this.moduleName = moduleName;
         this.schemaName = schemaName;
@@ -55,53 +69,66 @@ public class CascaraSchemaUri {
             throw new SchemaException("Not a valid schema URI: " + uri.toString(), "", uri);
         }
         else if (lifecycleString.equals("dynamic")) {
+            // Runtime Generation: dynamic/<module-name>/<schema-name>
             lifecycle = Lifecycle.DYNAMIC;
-            // TODO: Generate from java class
-            throw new SchemaException("Unimplemented: dynamic lifecycle", "", uri);
         }
         else if (lifecycleString.equals("draft")) {
+            // Versioned Disk Assets: draft/<module-name>/<schema-name>/<version>
             lifecycle = Lifecycle.DRAFT;
-            // The "Latest" Alias: <module-name>/<schema-name>
-            // TODO: This is called "resource" in the spec. Should it be renamed to "latest" or "current"?
         }
         else if (lifecycleString.equals("resource")) {
+            // The "Latest" Alias: draft/<module-name>/<schema-name>
             lifecycle = Lifecycle.RESOURCE;
-            // The "Latest" Alias: <module-name>/<schema-name>
-            // TODO: This is called "resource" in the spec. Should it be renamed to "latest" or "current"?
         } else {
-            throw new IllegalArgumentException("Unrecognized schema lifecycle: " + lifecycleString);
+            throw new SchemaException("Unrecognized schema lifecycle: " + lifecycleString, uri);
         }
 
         String moduleName = segmentQueue.poll();
         if (moduleName == null) {
-            throw new IllegalArgumentException("Missing module name");
+            throw new SchemaException("Missing module name", uri);
         }
 
         String schemaName = segmentQueue.poll();
         if (schemaName == null) {
-            throw new IllegalArgumentException("Missing schema name");
+            throw new SchemaException("Missing schema name", uri);
         }
 
         String version = null;
         if (lifecycle == Lifecycle.DRAFT) {
-            // Versioned Disk Assets: <module-name>/<schema-name>/<version>
+            // Versioned Disk Assets: draft/<module-name>/<schema-name>/<version>
             version = segmentQueue.poll();
+            if (version == null) {
+                throw new SchemaException("Missing version", uri);
+            }
         }
 
-        return new CascaraSchemaUri(uri, lifecycle, moduleName, schemaName, version);
-
-        // else {
-        //     try {
-        //         ResourceContent rc = schemaStore.get(lifecycleString, segmentQueue);
-        //         return rc;
-        //     } catch (Exception e) {
-        //         throw new SchemaException(e.getMessage(), e, uri);
-        //     }
-        // }
-
+        return new CascaraSchemaUri(lifecycle, moduleName, schemaName, version);
     }
 
-    public URI getUri() { return uri; }
+    public URI toUri() {
+        String uriString = switch (lifecycle) {
+            case DRAFT: yield String.format(
+                "%s/%s/%s/%s/%s",
+                SCHEMA_SERVICE_URI,
+                "draft",
+                moduleName, schemaName, version
+            );
+            case RESOURCE: yield String.format(
+                "%s/%s/%s/%s",
+                SCHEMA_SERVICE_URI,
+                "resource",
+                moduleName, schemaName
+            );
+            default: yield String.format(
+                "%s/%s/%s/%s",
+                SCHEMA_SERVICE_URI,
+                "dynamic",
+                moduleName, schemaName
+            );
+        };
+        return URI.create(uriString);
+    }
+
     public Lifecycle getLifecycle() { return lifecycle; }
     public String getModuleName() { return moduleName; }
     public String getSchemaName() { return schemaName; }

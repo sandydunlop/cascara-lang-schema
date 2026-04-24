@@ -21,27 +21,22 @@ public class SchemaException extends RuntimeException implements LocatableExcept
         this.schemaPath = schemaPath;
     }
 
-
-    // TODO: Tidy all this yp
-
     public SchemaException(String message, URI uri) {
-        super(message);
+        super(message + " (" + uri + ")");
         this.rawMessage = message;
         this.schemaPath = null;
         this.uri = uri;
     }
 
     public SchemaException(String message, Throwable cause, URI uri) {
-        super(message, cause);
+        super(message + " (" + uri + ")", cause);
         this.rawMessage = message;
         this.schemaPath = null;
         this.uri = uri;
     }
 
-
-
     public SchemaException(String message, String schemaPath, URI uri) {
-        super(message + String.format(" for %s (at %s)", schemaPath, uri));
+        super(message + String.format(" for %s (in %s)", schemaPath, uri));
         this.schemaPath = schemaPath;
         this.rawMessage = message;
     }

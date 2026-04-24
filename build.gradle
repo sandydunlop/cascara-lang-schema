@@ -23,6 +23,8 @@ dependencies {
     testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.mockito:mockito-junit-jupiter'
 
+    // testImplementation 'io.github.qishr:cascara-lang-json'
+
     // Cascara
     implementation "io.github.qishr:cascara-common"
     implementation "io.github.qishr:cascara-lang-json"

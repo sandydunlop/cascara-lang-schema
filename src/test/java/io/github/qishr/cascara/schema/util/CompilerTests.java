@@ -18,7 +18,7 @@ public class CompilerTests {
     void compiler_shouldPreserveCustomMetadata() {
         String json = """
         {
-        "$id": "cascara://core/schema-service/draft/cascara.schema/compiler-tests/0.1.0",
+        "$id": "cascara://core/schema-service/dynamic/cascara.schema/compiler-tests",
         "definitions": {
             "item": { "type": "object", "properties": { "status": { "type": "string", "x-tracked": true } } },
             "task": { "x-parent": "item", "type": "object", "properties": { "name": { "type": "string" } } }
@@ -28,7 +28,7 @@ public class CompilerTests {
         JsonParser parser = new JsonParser();
         JsonDocument doc = parser.parse(json);
 
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
+        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
         CompiledSchema schema = compiler.compile(doc);
 
@@ -48,7 +48,7 @@ public class CompilerTests {
         JsonParser parser = new JsonParser();
         JsonDocument doc = parser.parse(json);
 
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
+        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
         CompiledSchema schema = compiler.compile(doc);
 

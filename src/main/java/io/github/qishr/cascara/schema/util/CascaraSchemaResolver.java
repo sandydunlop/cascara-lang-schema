@@ -3,32 +3,33 @@ package io.github.qishr.cascara.schema.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Queue;
 import java.util.Set;
 
-import io.github.qishr.cascara.common.content.ContentLoader;
-import io.github.qishr.cascara.common.content.ResourceContent;
+import io.github.qishr.cascara.common.io.ContentLoader;
+import io.github.qishr.cascara.common.io.IOUtils;
+import io.github.qishr.cascara.common.io.ResourceContent;
+import io.github.qishr.cascara.common.io.UriScheme;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
-import io.github.qishr.cascara.common.util.UriScheme;
+import io.github.qishr.cascara.common.lang.processor.Parser;
+import io.github.qishr.cascara.common.spi.ParserFactory;
+import io.github.qishr.cascara.common.spi.ServiceException;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.CompiledSchema;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.api.SchemaCompiler;
-import io.github.qishr.cascara.schema.api.SchemaParser;
 import io.github.qishr.cascara.schema.api.SchemaResolver;
+import io.github.qishr.cascara.schema.api.TypeAnalyzer;
 import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
 import io.github.qishr.cascara.schema.ast.LazySchemaNode;
 import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
@@ -39,7 +40,6 @@ import io.github.qishr.cascara.schema.util.CascaraSchemaUri.Lifecycle;
 
 public class CascaraSchemaResolver implements SchemaResolver {
     private ContentLoader contentLoaderService;
-    private final SchemaParser parserService;
 
     private static final Map<URI,ResourceContent> metaSchemaResources = new HashMap<>();
 
@@ -50,9 +50,8 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
     private final SchemaStore schemaStore;
 
-    public CascaraSchemaResolver(SchemaParser parserService, ContentLoader contentLoaderService) {
-        this.contentLoaderService = contentLoaderService;
-        this.parserService = parserService;
+    public CascaraSchemaResolver() {
+        this.contentLoaderService = new SchemaContentLoader();
         this.schemaStore = SchemaStore.instance();
         loadBuiltInMetaSchemas();
     }
@@ -65,12 +64,20 @@ public class CascaraSchemaResolver implements SchemaResolver {
         CompiledSchema schema = schemaDocCache.get(uri);
         if (schema != null) return schema;
 
-        ResourceContent content;
-
+        ResourceContent content = null;
         if (UriScheme.of(uri) == UriScheme.CASCARA) {
-            content = getFileFromCascaraUri(uri);
-        } else {
-            content = getFileFromExternalUri(uri);
+            CascaraSchemaUri schemaUri = CascaraSchemaUri.of(uri);
+            if (schemaUri.getLifecycle() != Lifecycle.DYNAMIC) {
+                content = schemaStore.get(schemaUri);
+            }
+        }
+
+        if (content == null) {
+            try {
+                content = contentLoaderService.getContent(uri);
+            } catch (Exception e) {
+                throw new SchemaException(e.getMessage(), e, uri);
+            }
         }
 
         StructuredDocument doc = parseContent(content);
@@ -90,6 +97,22 @@ public class CascaraSchemaResolver implements SchemaResolver {
         }
     }
 
+    @Override
+    public CompiledSchema getSchemaForClass(Class<?> clazz) {
+        return getSchemaForClass(clazz, null);
+    }
+
+    @Override
+    public CompiledSchema getSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) {
+        URI uri = new CascaraSchemaUri(clazz).toUri();
+        CompiledSchema schema = schemaDocCache.get(uri);
+        if (schema == null) {
+            // This calls the compiler which adds the compiled schema to the cache
+            return generateSchemaForClass(clazz, typeAnalyzers);
+        }
+        return schema;
+    }
+
     //
     // Cache
     //
@@ -99,7 +122,9 @@ public class CascaraSchemaResolver implements SchemaResolver {
         schemaDocCache.put(uri, compiled);
         if (UriScheme.of(uri) == UriScheme.CASCARA) {
             CascaraSchemaUri schemaUri = CascaraSchemaUri.of(uri);
-            SchemaStore.instance().put(schemaUri, compiled);
+            if (schemaUri.getLifecycle() != Lifecycle.DYNAMIC) {
+                SchemaStore.instance().put(schemaUri, compiled);
+            }
         }
     }
 
@@ -143,53 +168,18 @@ public class CascaraSchemaResolver implements SchemaResolver {
     // Private MEthods
     //
 
-    private ResourceContent getFileFromExternalUri(URI uri) throws SchemaException {
-        try {
-            return contentLoaderService.getContent(uri);
-        } catch (IOException e) {
-            throw new SchemaException("Could not load schema file from URI: " + uri.toString(), e, uri.toString());
-        }
-    }
-
-    private ResourceContent getFileFromCascaraUri(URI uri) throws SchemaException {
-        // if (!uri.getHost().equalsIgnoreCase("core")) {
-        //     throw new SchemaException("Not a valid schema URI: " + uri.toString(), "", uri);
-        // }
-
-        // Queue<String> segmentQueue = new LinkedList<>();
-        // String[] segments = uri.getPath().split("/");
-        // for (String s : segments) {
-        //     // TODO: Is this right? Update DocumentService to match
-        //     // segmentQueue.add(URLDecoder.decode(s, StandardCharsets.UTF_8));
-        //     segmentQueue.add(s);
-        // }
-
-        // segmentQueue.poll(); // Remove the empty one
-
-        // if (!segmentQueue.poll().equalsIgnoreCase("schema-service")) {
-        //     throw new SchemaException("Not a valid schema URI: " + uri.toString(), "", uri);
-        // }
-
-        // String lifecycle = segmentQueue.poll();
-
-        CascaraSchemaUri schemaUri = CascaraSchemaUri.of(uri);
-
-        // if (lifecycle == null) {
-        //     throw new SchemaException("Not a valid schema URI: " + uri.toString(), "", uri);
-        // }
-        // else
-        if (schemaUri.getLifecycle() == Lifecycle.DYNAMIC) {
-            // TODO: Generate from java class
-            throw new SchemaException("Unimplemented: dynamic lifecycle", "", uri);
-        } else {
-            try {
-                ResourceContent rc = schemaStore.get(schemaUri);
-                return rc;
-            } catch (Exception e) {
-                throw new SchemaException(e.getMessage(), e, uri);
+    private CompiledSchema generateSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) throws SchemaException {
+        URI originUri = new CascaraSchemaUri(clazz).toUri();
+        SchemaCompiler compiler = new CascaraSchemaCompiler(this);
+        ClassSchemaGenerator generator = new ClassSchemaGenerator();
+        if (typeAnalyzers != null) {
+            for (TypeAnalyzer ta : typeAnalyzers) {
+                generator.registerTypeAnalyzer(ta);
             }
         }
-
+        StructuredDocument schemaDoc = generator.generate(clazz);
+        CompiledSchema compiledSchema = compiler.compile(schemaDoc, originUri);
+        return compiledSchema;
     }
 
     /// Internal version that carries the scope
@@ -384,12 +374,25 @@ public class CascaraSchemaResolver implements SchemaResolver {
     }
 
     private StructuredDocument parseContent(ResourceContent res) {
-        if (res.contentType() == null || res.contentType().getId().contains("json")) {
-            JsonParser parser = new JsonParser();
-            // System.out.println("\n === PARSING ===\n" + res.content());
-            return parser.parse(res.content());
+        String contentType;
+        if (res.contentType() == null) {
+            contentType = "application/schema+json";
         } else {
-            return parserService.parseContent(res);
+            contentType = res.contentType().toString();
+        }
+        try {
+            Parser<?,?> parser;
+            if (contentType.contains("json")) {
+                parser = new JsonParser();
+            } else {
+                parser = new ParserFactory().create(contentType);
+                if (parser == null) {
+                    throw new IllegalStateException("Failed to find parser for " + contentType);
+                }
+            }
+            return parser.parse(res.content());
+        } catch (ServiceException e) {
+            throw new IllegalStateException("Failed to load parser for " + contentType + ": " + e.getMessage(), e);
         }
     }
 
@@ -437,5 +440,12 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
         // 4. Restore the real content loader
         contentLoaderService = realLoader;
+    }
+
+    private class SchemaContentLoader implements ContentLoader {
+        @Override
+        public ResourceContent getContent(URI uri) throws IOException {
+            return IOUtils.getResource(uri);
+        }
     }
 }

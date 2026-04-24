@@ -125,6 +125,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                 metaRoot = metaDoc.getRoot();
             } catch (Exception e) {
                 reporter.warn("Could not resolve meta-schema: " + metaUri);
+                reporter.warn(e.getMessage());
             }
         }
 

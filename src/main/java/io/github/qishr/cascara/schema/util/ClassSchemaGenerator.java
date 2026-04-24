@@ -236,7 +236,10 @@ public final class ClassSchemaGenerator {
     }
 
     private void applyExternalRef(SimpleMapNode node, Class<?> target, Field field) {
-        node.put("$ref", scalar(SCHEMA_SERVICE_URI + target.getName()));
+        CascaraSchemaUri schemaUri = new CascaraSchemaUri(target);
+        String schemaUriString = schemaUri.toUri().toString();
+        // node.put("$ref", scalar(SCHEMA_SERVICE_URI + target.getName()));
+        node.put("$ref", scalar(schemaUriString));
     }
 
     private void applyInternalRef(SimpleMapNode node, Class<?> target) {

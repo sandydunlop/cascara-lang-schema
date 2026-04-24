@@ -24,7 +24,7 @@ public class SystemTests {
 
     @BeforeEach
     void setup() {
-        resolver = new CascaraSchemaResolver(null, null);
+        resolver = new CascaraSchemaResolver();
         compiler = new CascaraSchemaCompiler(resolver);
     }
 
@@ -35,8 +35,8 @@ public class SystemTests {
 
         String json = """
             {
-                "$id": "cascara://core/schema-service/draft/cascara.schema/entities/0.1.0",
-                "$schema": "cascara://core/schema-service/cascara.persistence.cema/cema-meta",
+                "$id": "cascara://core/schema-service/dynamic/cascara.schema/entities",
+                "$schema": "cascara://core/schema-service/dynamic/cascara.persistence.cema/cema-meta",
                 "$defs": {
                   "tag": {
                     "type": "object",
@@ -121,8 +121,8 @@ public class SystemTests {
 
         String json = """
             {
-              "$id": "cascara://core/schema-service/draft/cascara.schema/entities/0.1.0",
-              "$schema": "cascara://core/schema-service/cascara.persistence.cema/cema-meta",
+              "$id": "cascara://core/schema-service/dynamic/cascara.schema/entities",
+              "$schema": "cascara://core/schema-service/dynamic/cascara.persistence.cema/cema-meta",
               "$defs": {
                 "module": {
                   "type": "object",

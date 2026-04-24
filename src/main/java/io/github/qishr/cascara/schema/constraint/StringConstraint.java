@@ -10,4 +10,6 @@ import java.lang.annotation.ElementType;
 public @interface StringConstraint {
     String pattern() default ""; // Regex
     String[] options() default {}; // For EnumRule
+    int minLength() default -1;
+    int maxLength() default -1;
 }

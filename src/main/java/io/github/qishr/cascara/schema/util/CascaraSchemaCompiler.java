@@ -438,22 +438,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             schemaNode.setFormatOption(ABSOLUTE, absolute);
         }
 
-        // Capture extensions for the FileExtensionRule
-        if (astNode.get(EXTENSIONS) instanceof SequenceAstNode extNode) {
-            @SuppressWarnings("rawtypes")
-            List<String> extensions = extNode.getElements().stream()
-                .filter(n -> n instanceof ScalarAstNode)
-                .map(n -> ((ScalarAstNode) n).getString())
-                .toList();
-
-            // This is what the SE uses to filter the FileChooser
-            schemaNode.addRule(new io.github.qishr.cascara.schema.rule.FileExtensionRule(
-                extensions.toArray(new String[0])
-            ));
-        }
-        //------------------------------
-
-
         // EnumRule
         if (astNode.get(SchemaKeyword.ENUM.string()) instanceof SequenceAstNode enumNode) {
             @SuppressWarnings("rawtypes")

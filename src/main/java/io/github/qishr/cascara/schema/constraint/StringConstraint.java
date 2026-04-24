@@ -10,7 +10,4 @@ import java.lang.annotation.ElementType;
 public @interface StringConstraint {
     String pattern() default ""; // Regex
     String[] options() default {}; // For EnumRule
-    String provider() default "";
-    String parameter() default "";
-    String ui() default "";
 }

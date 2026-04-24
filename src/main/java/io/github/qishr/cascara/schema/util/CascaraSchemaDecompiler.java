@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.github.qishr.cascara.common.lang.ast.QuoteStyle;
+import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapEntryNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
@@ -46,7 +47,7 @@ public final class CascaraSchemaDecompiler {
     private static final String DYNAMIC_ANCHOR = "$dynamicAnchor";
     private static final String DYNAMIC_REF = "$dynamicRef";
 
-    public SimpleMapNode decompile(CompiledSchema compiled) {
+    public SimpleDocument decompile(CompiledSchema compiled) {
         if (compiled == null || compiled.getRoot() == null) return null;
 
         SchemaNode compiledRoot = compiled.getRoot();
@@ -67,7 +68,7 @@ public final class CascaraSchemaDecompiler {
         for (SimpleMapEntryNode entry : decompiled.getEntries()) {
             root.put(entry.getKey(), entry.getValue());
         }
-        return root;
+        return new SimpleDocument(root);
     }
 
     private SimpleMapNode decompileInternal(SchemaNode compiled) throws SchemaException {
@@ -96,14 +97,14 @@ public final class CascaraSchemaDecompiler {
                     yield object(o);
                 }
                 else if (compiled instanceof LazySchemaNode lazy) {
-                    SimpleMapNode map = new SimpleMapNode();
+                    // SimpleMapNode map = new SimpleMapNode();
                     // String reference = bridge.getRef();
 
                     SimpleMapNode refMap = new SimpleMapNode();
                     String ref = lazy.getRef();
                     String refKey = (ref != null && ref.startsWith("#") && !ref.contains("/")) ? DYNAMIC_REF : REF;
                     refMap.put(refKey, scalarValue(ref));
-                    yield map;
+                    yield refMap;
                 }
                 else {
                     yield null;
@@ -129,10 +130,6 @@ public final class CascaraSchemaDecompiler {
     private SimpleMapNode object(ObjectSchemaNode object) throws SchemaException {
         SimpleMapNode map = new SimpleMapNode();
         map.put(TYPE, scalarValue(OBJECT));
-
-        // if (object.getName() != null && !object.getName().isEmpty()) {
-        //     map.put("name", scalarValue(object.getName()));
-        // }
 
         // definitions
         if (!object.getDefinitions().isEmpty()) {

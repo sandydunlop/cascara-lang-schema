@@ -111,7 +111,6 @@ public class LazySchemaNode extends BaseSchemaNode {
     @Override public boolean isRef() { return true; }
     @Override public String getRef() { return this.ref; }
     @Override public List<ValidationRule> getRules() { return getResolved().getRules(); }
-    @Override public String getTitle() { return getResolved().getTitle(); }
     @Override public String getDescription() { return getResolved().getDescription(); }
     @Override public Map<String, SchemaNode> getDefinitions() { return getResolved().getDefinitions(); }
     @Override public Object getDefaultValue() { return getResolved().getDefaultValue(); }

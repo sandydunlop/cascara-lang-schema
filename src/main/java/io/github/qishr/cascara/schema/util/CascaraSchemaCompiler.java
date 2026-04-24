@@ -2,6 +2,7 @@ package io.github.qishr.cascara.schema.util;
 
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +88,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         }
 
         if (originUri == null) {
-            AstNode idNode = map.get("$id");
+            AstNode idNode = map.get(SchemaKeyword.ID.string());
             if (!(idNode instanceof ScalarAstNode scalarId)) {
                 reporter.error("Document must contain $id or origin URI must be given to compiler");
                 return null;
@@ -109,9 +110,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             name = ROOT;
         }
 
-
-
-
         // RESOLVE THE META-SCHEMA
         // Look for $schema in the root map. If not found, use a default from the resolver.
         URI metaUri = URI.create(META_SCHEMA_URI);
@@ -127,26 +125,22 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                 metaRoot = metaDoc.getRoot();
             } catch (Exception e) {
                 reporter.warn("Could not resolve meta-schema: " + metaUri);
+                reporter.warn(e.getMessage());
             }
         }
-
-
-
 
         SchemaNode schemaRoot = processNode(map, name, originUri, originUri, null, metaRoot);
 
         CompiledSchema compiled = new CompiledSchema(originUri, schemaRoot);
-        resolver.registerSchema(originUri, compiled);
+        if (resolver != null) {
+            resolver.registerSchema(originUri, compiled);
+        }
         finalizeNodes(compiled.getRoot());
         return compiled;
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private SchemaNode processNode(MapAstNode astNode, String name, URI originUri, URI logicalBaseUri, SchemaNode rootSchema, SchemaNode meta) {
-
-
-
-
         // 1. Calculate Logical Base ($id) and handle $anchor
         String idValue = astNode.getString(SchemaKeyword.ID.string());
         URI currentBase = (idValue != null && !idValue.isEmpty())
@@ -158,20 +152,16 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         String dynamicAnchor = astNode.getString(SchemaKeyword.DYNAMIC_ANCHOR.string());
 
         if (refValue == null || refValue.isEmpty()) {
-            refValue = astNode.getString("$dynamicRef");
+            refValue = astNode.getString(SchemaKeyword.DYNAMIC_REF.string());
         }
-
-
-
 
         // 1. Check for a local Meta-Schema override ($schema)
         SchemaNode currentMeta = meta;
-        String localSchema = astNode.getString("$schema");
+        String localSchema = astNode.getString(SchemaKeyword.SCHEMA.string());
         if (localSchema != null) {
             try {
                 // Resolve the new meta-schema URI relative to the current base
                 URI metaUri = logicalBaseUri.resolve(localSchema);
-                // currentMeta = resolver.getSchema(metaUri).getRoot();
                 if (originUri.equals(metaUri)) {
                     // If we are the meta-schema, our 'meta' is null (or 'this' logic applies)
                     currentMeta = (rootSchema != null) ? rootSchema : null;
@@ -202,9 +192,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
             };
         }
 
-
-
-
         if (idValue != null) {
             resolver.registerSchemaNode(currentBase, schemaNode);
         }
@@ -234,20 +221,19 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                     objNode.setAdditionalPropertiesAllowed(b);
                 }
             } else if (addProps instanceof MapAstNode mapAddProps) {
-                // NEW: It's a schema object!
+                // It's a schema object
                 objNode.setAdditionalPropertiesSchema(
                     processNode(mapAddProps, "additionalProperties", originUri, currentBase, effectiveRoot, meta)
                 );
             }
 
-            // unevaluatedProperties
             AstNode unevProps = astNode.get(SchemaKeyword.UNEVALUATED_PROPERTIES.string());
             if (unevProps instanceof ScalarAstNode scalar) {
                 if (scalar.getPrimitiveValue() instanceof Boolean b) {
                     objNode.setUnevaluatedPropertiesAllowed(b);
                 }
             } else if (unevProps instanceof MapAstNode mapUnevProps) {
-                // NEW: It's a schema object!
+                // It's a schema object
                 objNode.setUnevaluatedPropertiesSchema(
                     processNode(mapUnevProps, "unevaluatedProperties", originUri, currentBase, effectiveRoot, meta)
                 );
@@ -305,7 +291,6 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         if (astNode.get(key.string()) instanceof SequenceAstNode seq) {
             seq.getElements().forEach(element -> {
                 if (element instanceof MapAstNode m) {
-                    // TODO: Again, originUri same as node URI?!
                     SchemaNode subSchema = processNode(m, key.string() + "-item", uri, uri, root, meta);
 
                     // ATTACH IT to the parent
@@ -377,11 +362,14 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                         AstNode valBase = node.getValue();
 
                         if (valBase instanceof ScalarAstNode valNode) {
-                            // Handle simple hints (x-tracked: true)
+                            // Handle simple extensions (x-tracked: true)
                             schemaNode.setExtension(key, valNode.getPrimitiveValue());
                         } else if (valBase instanceof MapAstNode mapNode) {
-                            // Handle complex hints (x-indexed: { name: "...", unique: true })
+                            // Handle object extensions (x-indexed: { name: "...", unique: true })
                             schemaNode.setExtension(key, convertToMap(mapNode));
+                        } else if (valBase instanceof SequenceAstNode seqNode) {
+                            // Handle array extensions (x-display-columns: [ "title", "date" ])
+                            schemaNode.setExtension(key, convertToList(seqNode));
                         }
                     }
                 }
@@ -400,7 +388,23 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
                     result.put(kn.getString(), scalar.getPrimitiveValue());
                 } else if (vn instanceof MapAstNode nestedMap) {
                     result.put(kn.getString(), convertToMap(nestedMap));
+                } else if (vn instanceof SequenceAstNode nestedSeq) {
+                    result.put(kn.getString(), convertToList(nestedSeq));
                 }
+            }
+        });
+        return result;
+    }
+
+    private List<Object> convertToList(SequenceAstNode<?> seqNode) {
+        List<Object> result = new ArrayList<>();
+        seqNode.getElements().forEach(element -> {
+            if (element instanceof ScalarAstNode scalar) {
+                result.add(scalar.getPrimitiveValue());
+            } else if (element instanceof MapAstNode nestedMap) {
+                result.add(convertToMap(nestedMap));
+            } else if (element instanceof SequenceAstNode nestedSeq) {
+                result.add(convertToList(nestedSeq));
             }
         });
         return result;

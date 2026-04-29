@@ -5,8 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import io.github.qishr.cascara.common.content.ContentType;
-import io.github.qishr.cascara.common.io.ResourceContent;
+import io.github.qishr.cascara.common.util.ContentType;
+import io.github.qishr.cascara.common.content.ResourceContent;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.spi.ContentTypes;
 import io.github.qishr.cascara.lang.json.processor.JsonConverter;

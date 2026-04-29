@@ -30,7 +30,7 @@ import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.api.SchemaParser;
 import io.github.qishr.cascara.common.io.ContentLoader;
-import io.github.qishr.cascara.common.io.ResourceContent;
+import io.github.qishr.cascara.common.content.ResourceContent;
 
 public class BasedTests extends SchemaIntegrationTestBase {
 

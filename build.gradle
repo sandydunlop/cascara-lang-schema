@@ -27,6 +27,7 @@ dependencies {
 
     // Cascara
     implementation "io.github.qishr:cascara-common"
+    implementation "io.github.qishr:cascara-common-io"
     implementation "io.github.qishr:cascara-lang-json"
 }
 

@@ -1,6 +1,10 @@
 module cascara.schema {
-    requires transitive cascara.common;
     requires cascara.lang.json;
+    requires transitive cascara.common;
+    requires transitive cascara.common.io;
+
+    uses io.github.qishr.cascara.common.lang.processor.AstConverter;
+    uses io.github.qishr.cascara.common.lang.processor.Parser;
 
     exports io.github.qishr.cascara.schema;
     exports io.github.qishr.cascara.schema.annotation;

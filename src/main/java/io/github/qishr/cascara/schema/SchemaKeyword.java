@@ -70,7 +70,10 @@ public enum SchemaKeyword {
     DESCRIPTION("description", SchemaType.STRING),
     DEFAULT("default", SchemaType.ANY),
     DEPRECATED("deprecated", SchemaType.BOOLEAN),
+    
     READ_ONLY("readOnly", SchemaType.BOOLEAN),
+
+    
     WRITE_ONLY("writeOnly", SchemaType.BOOLEAN),
     FORMAT("format", SchemaType.STRING),
     CONTENT_MEDIA_TYPE("contentMediaType", SchemaType.STRING),

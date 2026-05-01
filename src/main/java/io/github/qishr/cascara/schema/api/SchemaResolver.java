@@ -1,6 +1,7 @@
 package io.github.qishr.cascara.schema.api;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 
 import io.github.qishr.cascara.schema.CompiledSchema;
@@ -15,6 +16,8 @@ public interface SchemaResolver {
     DynamicScope getCurrentScope();
 
     CompiledSchema getSchema(URI uri) throws SchemaException;
+    CompiledSchema getSchemaForClass(Class<?> clazz);
+    CompiledSchema getSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers);
     Map<URI, CompiledSchema> getCachedSchemas();
 
     void registerSchema(URI uri, CompiledSchema compiled);

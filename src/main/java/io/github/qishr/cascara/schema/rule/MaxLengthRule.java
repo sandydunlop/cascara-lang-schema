@@ -14,14 +14,21 @@ public class MaxLengthRule implements ValidationRule {
     @Override
     public void validate(AstNode node, String path, ValidationResult result) {
         if (node instanceof ScalarAstNode scalar) {
-            Object val = scalar.getPrimitiveValue();
-            if (val instanceof String str) {
-                int length = str.length();
-                if (length > max) {
-                    result.addError(path,
-                        String.format("Length %s is more than the maximum allowed (%s)", length, max),
-                        node.getStartLine(), node.getStartColumn());
-                }
+            validateValue(scalar.getPrimitiveValue(), path, result, node.getStartLine(), node.getStartColumn());
+        }
+    }
+
+    @Override
+    public void validateValue(Object value, String path, ValidationResult result) {
+        validateValue(value, path, result, -1, -1);
+    }
+
+    private void validateValue(Object value, String path, ValidationResult result, int line, int col) {
+        if (value instanceof String str) {
+            int length = str.length();
+            if (length > max) {
+                String msg = String.format("Length %s is more than the maximum allowed (%s)", length, max);
+                result.addError(path, msg, line, col);
             }
         }
     }

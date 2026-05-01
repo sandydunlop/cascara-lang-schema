@@ -26,7 +26,7 @@ public class SimpleEntityTests {
     @Test
     public void simpleEntity_has_scalar_fields() {
         ClassSchemaGenerator generator = new ClassSchemaGenerator();
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
+        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         SimpleDocument doc = generator.generate(SimpleEntity.class);
@@ -41,7 +41,7 @@ public class SimpleEntityTests {
     @Test
     public void refEntity_distinguishes_single_and_collection_references() {
         ClassSchemaGenerator generator = new ClassSchemaGenerator();
-        SchemaCompiler compiler = new CascaraSchemaCompiler(new CascaraSchemaResolver(null, null));
+        SchemaCompiler compiler = new CascaraSchemaCompiler(new CascaraSchemaResolver());
 
         SimpleDocument doc = generator.generate(RefEntity.class);
         CompiledSchema schema = compiler.compile(doc, URI.create("runtime://schema"));
@@ -75,7 +75,7 @@ public class SimpleEntityTests {
     @Test
     public void ignoreEntity_ignores_dataignore_fields() {
         ClassSchemaGenerator generator = new ClassSchemaGenerator();
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
+        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         SimpleDocument doc = generator.generate(IgnoreEntity.class);
@@ -91,7 +91,7 @@ public class SimpleEntityTests {
     public void array_reference_is_marked_as_collection() {
         ClassSchemaGenerator generator = new ClassSchemaGenerator();
         // TestResolver resolver = new TestResolver();
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null) ;
+        CascaraSchemaResolver resolver = new CascaraSchemaResolver() ;
         SchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         URI uri = URI.create("runtime://schema");

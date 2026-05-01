@@ -104,7 +104,7 @@ class ClassSchemaGeneratorTest {
         var doc1 = generator.generate(SimpleEntity.class);
         var doc2 = generator.generate(SimpleEntity.class);
 
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver(null, null);
+        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
 

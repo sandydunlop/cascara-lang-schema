@@ -47,6 +47,8 @@ public final class CascaraSchemaDecompiler {
     private static final String DYNAMIC_ANCHOR = "$dynamicAnchor";
     private static final String DYNAMIC_REF = "$dynamicRef";
 
+    private URI originUri;
+
     public SimpleDocument decompile(CompiledSchema compiled) {
         if (compiled == null || compiled.getRoot() == null) return null;
 
@@ -62,7 +64,8 @@ public final class CascaraSchemaDecompiler {
             root.put(SCHEMA, scalarValue(META_SCHEMA_URI));
         }
 
-        root.put(ID, scalarValue(compiled.getOriginUri()));
+        originUri = compiled.getOriginUri();
+        root.put(ID, scalarValue(originUri));
 
         SimpleMapNode decompiled = decompileInternal(compiledRoot);
         for (SimpleMapEntryNode entry : decompiled.getEntries()) {
@@ -173,7 +176,7 @@ public final class CascaraSchemaDecompiler {
         SchemaNode template = array.getItemSchema();
         if (template instanceof LazySchemaNode lazy) {
             if (lazy.getRef() == null || lazy.getRef().isEmpty()) {
-                throw new SchemaException("Missing $ref: ", array.getOriginUri().toString());
+                throw new SchemaException("Missing $ref: ", array.getOriginUri().toString(), originUri);
             }
             items.put(REF, scalarValue(lazy.getRef()));
         }

@@ -14,10 +14,9 @@ import io.github.qishr.cascara.schema.constraint.NumberConstraint;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
 import io.github.qishr.cascara.schema.internal.SchemaUtils;
-import io.github.qishr.cascara.schema.rule.MaxValueRule;
-import io.github.qishr.cascara.schema.rule.MinValueRule;
 
 import java.lang.reflect.*;
+import java.net.URI;
 import java.util.*;
 
 public final class ClassSchemaGenerator {
@@ -36,6 +35,8 @@ public final class ClassSchemaGenerator {
     private boolean multiClassDocument = false;
     private SimpleMapNode definitionsContainer;
     private String definitionsLocation = "#/" + SchemaKeyword.DEFS.string();
+
+    private URI originUri;
 
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
         typeAnalyzers.add(ta);
@@ -64,6 +65,10 @@ public final class ClassSchemaGenerator {
 
         if (parentDoc != null) {
             multiClassDocument = true;
+            String id = parentDoc.getString("id");
+            if (id != null) {
+                originUri = URI.create(id);
+            }
 
             // If no location is specified for storing class definitions, use the default
             if (fragment == null) {
@@ -75,7 +80,7 @@ public final class ClassSchemaGenerator {
             if (SchemaUtils.resolveFragment(parentDoc, fragment) instanceof SimpleMapNode map) {
                 definitionsContainer = map;
             } else {
-                throw new SchemaException("Path does not resolve to an object", fragment);
+                throw new SchemaException("Path does not resolve to an object", fragment, originUri);
             }
         }
 
@@ -105,14 +110,15 @@ public final class ClassSchemaGenerator {
             clazz = template.getClass();
         }
         SimpleMapNode root = new SimpleMapNode();
-        root.put("name", scalar(clazz.getSimpleName()));
+        // root.put("name", scalar(clazz.getSimpleName()));
         fillObjectMetadata(clazz, root);
         root.put("type", scalar(OBJECT));
 
         SimpleMapNode properties = new SimpleMapNode();
         root.put("properties", properties);
 
-        properties.put("id", createIdFieldNode());
+        // // ID key for persistence? TODO: This should not be hard-coded here
+        // properties.put("id", createIdFieldNode());
 
         if (template == null) {
             template = instantiate(clazz);
@@ -152,7 +158,7 @@ public final class ClassSchemaGenerator {
                 root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), scalar(mediaType.value()));
             }
 
-            // TODO: TypeAnalyzers
+            applyTypeAnalysis(clazz, root);
         }
     }
 
@@ -233,6 +239,12 @@ public final class ClassSchemaGenerator {
         for (TypeAnalyzer ta : typeAnalyzers) {
             ta.analyze(field, targetAst);
             ta.analyze(field.getType(), targetAst);
+        }
+    }
+
+    private void applyTypeAnalysis(Class<?> clazz, SimpleMapNode targetAst) {
+        for (TypeAnalyzer ta : typeAnalyzers) {
+            ta.analyze(clazz, targetAst);
         }
     }
 

@@ -14,13 +14,20 @@ public class MinValueRule implements ValidationRule {
     @Override
     public void validate(AstNode node, String path, ValidationResult result) {
         if (node instanceof ScalarAstNode scalar) {
-            Object val = scalar.getPrimitiveValue();
-            if (val instanceof Number num) {
-                if (num.doubleValue() < min) {
-                    result.addError(path,
-                        String.format("Value %s is less than the minimum allowed (%s)", num, min),
-                        node.getStartLine(), node.getStartColumn());
-                }
+            validateValue(scalar.getPrimitiveValue(), path, result, node.getStartLine(), node.getStartColumn());
+        }
+    }
+
+    @Override
+    public void validateValue(Object value, String path, ValidationResult result) {
+        validateValue(value, path, result, -1, -1);
+    }
+
+    private void validateValue(Object value, String path, ValidationResult result, int line, int col) {
+        if (value instanceof Number num) {
+            if (num.doubleValue() < min) {
+                String msg = String.format("Value %s is less than the minimum allowed (%s)", num, min);
+                result.addError(path, msg, line, col);
             }
         }
     }

@@ -14,7 +14,7 @@ import java.util.Set;
 
 import io.github.qishr.cascara.common.io.ContentLoader;
 import io.github.qishr.cascara.common.io.IOUtils;
-import io.github.qishr.cascara.common.io.ResourceContent;
+import io.github.qishr.cascara.common.content.ResourceContent;
 import io.github.qishr.cascara.common.io.UriScheme;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
@@ -271,7 +271,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
         SchemaNode found = findNodeByAst(schemaDoc.getRoot(), targetAst);
 
         if (found == null) {
-            throw new SchemaException("Could not find node for fragment", fragment);
+            throw new SchemaException("Could not find node for fragment", fragment, schemaDoc.getOriginUri());
         }
 
         // 3. Update the Dynamic Scope and return
@@ -421,7 +421,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
                 }
             }
         } catch (IOException e) {
-            throw new SchemaException("Failed to initialize built-in meta-schemas", e, propsPath);
+            throw new SchemaException("Failed to initialize built-in meta-schemas", e, null);
         }
 
         // 2. Temporarily swap the content loader for one that only loads cached meta schemas

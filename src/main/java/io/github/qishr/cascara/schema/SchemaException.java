@@ -2,77 +2,74 @@ package io.github.qishr.cascara.schema;
 
 import java.net.URI;
 
+import io.github.qishr.cascara.common.lang.exception.LanguageException;
 import io.github.qishr.cascara.common.lang.exception.LocatableException;
+import io.github.qishr.cascara.common.util.CascaraRuntimeException;
 
-public class SchemaException extends RuntimeException implements LocatableException {
+public class SchemaException extends CascaraRuntimeException implements LocatableException {
+    private static final int UNKNOWN_COORD = LanguageException.UNKNOWN_COORD;
+
     private final String schemaPath;
-    private int line = -1;
-    private int column = -1;
-    private URI uri;
+    private final int line;
+    private final int column;
+    private final URI uri;
     private final String rawMessage;
 
-    /**
-     * Standard constructor for logical schema errors.
-     */
-    @Deprecated
-    public SchemaException(String message, String schemaPath) {
-        super(message + " for " + schemaPath);
-        this.rawMessage = message;
-        this.schemaPath = schemaPath;
+    /// For errors in a schema for a class.
+    public SchemaException(String message, Class<?> clazz) {
+        this(
+            message, message + " for " + clazz,
+            null, null, null, UNKNOWN_COORD, UNKNOWN_COORD, null
+        );
     }
 
-    public SchemaException(String message, URI uri) {
-        super(message + " (" + uri + ")");
-        this.rawMessage = message;
-        this.schemaPath = null;
-        this.uri = uri;
-    }
-
+    /// For errors in a schema caused by an exception.
     public SchemaException(String message, Throwable cause, URI uri) {
-        super(message + " (" + uri + ")", cause);
-        this.rawMessage = message;
-        this.schemaPath = null;
-        this.uri = uri;
+        this(
+            message, uri == null ? message : message + " (" + uri + ")",
+            cause, null, null, UNKNOWN_COORD, UNKNOWN_COORD, uri
+        );
     }
 
-    public SchemaException(String message, String schemaPath, URI uri) {
-        super(message + String.format(" for %s (in %s)", schemaPath, uri));
-        this.schemaPath = schemaPath;
-        this.rawMessage = message;
+    /// For errors in a schema.
+    public SchemaException(String message, URI uri) {
+        this(
+            message, uri == null ? message : message + " (" + uri + ")",
+            null, null, null, UNKNOWN_COORD, UNKNOWN_COORD, uri
+        );
     }
 
-    public SchemaException(String message, String schemaPath, int line, int column, URI uri) {
-        super(message + String.format(" for %s (at %s:%d)", schemaPath, uri, line));
-        this.schemaPath = schemaPath;
-        this.rawMessage = message;
-        this.line = line;
-        this.column = column;
-        this.uri = uri;
-    }
-
+    /// For errors in a schema where the line and column are known.
     public SchemaException(String message, int line, int column, URI uri) {
-        super(message + String.format(" (at %s:%d)", uri, line));
-        this.schemaPath = null;
+        this(
+            message, message + String.format(" (at %s:%d)", uri, line),
+            null, null, null, line, column, uri
+        );
+    }
+
+    /// For errors relating to a path in a compiled schema.
+    public SchemaException(String message, String schemaPath, URI uri) {
+        this(
+            message, message + String.format(" for %s (in %s)", schemaPath, uri),
+            null, null, schemaPath, UNKNOWN_COORD, UNKNOWN_COORD, uri
+        );
+    }
+
+    /// For errors relating to a path in a schema where the line and column are known.
+    public SchemaException(String message, String schemaPath, int line, int column, URI uri) {
+        this(
+            message, message + String.format(" for %s (at %s:%d)", schemaPath, uri, line),
+            null, null, schemaPath, line, column, uri
+        );
+    }
+
+    private SchemaException(String rawMessage, String message, Throwable cause, Class<?> clazz, String schemaPath, int line, int column, URI uri) {
+        super(message, cause);
         this.rawMessage = message;
+        this.schemaPath = schemaPath;
         this.line = line;
         this.column = column;
         this.uri = uri;
-    }
-
-    /**
-     * The "Context-Aware" wrapper.
-     * It checks if the cause is Locatable and inherits its coordinates.
-     */
-    public SchemaException(String message, Throwable cause, String schemaPath) {
-        super(message + (schemaPath != null ? " (at " + schemaPath + ")" : ""), cause);
-        this.schemaPath = schemaPath != null ? schemaPath : "unknown";
-        this.rawMessage = message;
-
-        if (cause instanceof LocatableException loc) {
-            this.line = loc.getLine();
-            this.column = loc.getColumn();
-            this.uri = loc.getUri();
-        }
     }
 
     @Override public int getLine() { return line; }

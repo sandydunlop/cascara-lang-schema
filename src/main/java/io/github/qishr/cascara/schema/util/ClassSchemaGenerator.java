@@ -1,25 +1,25 @@
 package io.github.qishr.cascara.schema.util;
 
+import io.github.qishr.cascara.schema.SchemaException;
+import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.common.lang.annotation.DataField;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.simple.*;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
-import io.github.qishr.cascara.schema.SchemaException;
-import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.annotation.ContentMediaType;
 import io.github.qishr.cascara.schema.annotation.SchemaDefinition;
 import io.github.qishr.cascara.schema.api.TypeAnalyzer;
+import io.github.qishr.cascara.schema.constraint.NumberConstraint;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
 import io.github.qishr.cascara.schema.internal.SchemaUtils;
 
 import java.lang.reflect.*;
+import java.net.URI;
 import java.util.*;
 
 public final class ClassSchemaGenerator {
-
-    private static final String SCHEMA_SERVICE_URI = "cascara://core/schema-service/";
 
     private static final String ARRAY = "array";
     private static final String BOOLEAN = "boolean";
@@ -35,6 +35,8 @@ public final class ClassSchemaGenerator {
     private boolean multiClassDocument = false;
     private SimpleMapNode definitionsContainer;
     private String definitionsLocation = "#/" + SchemaKeyword.DEFS.string();
+
+    private URI originUri;
 
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
         typeAnalyzers.add(ta);
@@ -63,6 +65,10 @@ public final class ClassSchemaGenerator {
 
         if (parentDoc != null) {
             multiClassDocument = true;
+            String id = parentDoc.getString("id");
+            if (id != null) {
+                originUri = URI.create(id);
+            }
 
             // If no location is specified for storing class definitions, use the default
             if (fragment == null) {
@@ -74,7 +80,7 @@ public final class ClassSchemaGenerator {
             if (SchemaUtils.resolveFragment(parentDoc, fragment) instanceof SimpleMapNode map) {
                 definitionsContainer = map;
             } else {
-                throw new SchemaException("Path does not resolve to an object", fragment);
+                throw new SchemaException("Path does not resolve to an object", fragment, originUri);
             }
         }
 
@@ -104,14 +110,15 @@ public final class ClassSchemaGenerator {
             clazz = template.getClass();
         }
         SimpleMapNode root = new SimpleMapNode();
-        root.put("name", scalar(clazz.getSimpleName()));
+        // root.put("name", scalar(clazz.getSimpleName()));
         fillObjectMetadata(clazz, root);
         root.put("type", scalar(OBJECT));
 
         SimpleMapNode properties = new SimpleMapNode();
         root.put("properties", properties);
 
-        properties.put("id", createIdFieldNode());
+        // // ID key for persistence? TODO: This should not be hard-coded here
+        // properties.put("id", createIdFieldNode());
 
         if (template == null) {
             template = instantiate(clazz);
@@ -151,7 +158,7 @@ public final class ClassSchemaGenerator {
                 root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), scalar(mediaType.value()));
             }
 
-            // TODO: TypeAnalyzers
+            applyTypeAnalysis(clazz, root);
         }
     }
 
@@ -235,6 +242,12 @@ public final class ClassSchemaGenerator {
         }
     }
 
+    private void applyTypeAnalysis(Class<?> clazz, SimpleMapNode targetAst) {
+        for (TypeAnalyzer ta : typeAnalyzers) {
+            ta.analyze(clazz, targetAst);
+        }
+    }
+
     private void applyExternalRef(SimpleMapNode node, Class<?> target, Field field) {
         CascaraSchemaUri schemaUri = new CascaraSchemaUri(target);
         String schemaUriString = schemaUri.toUri().toString();
@@ -303,21 +316,48 @@ public final class ClassSchemaGenerator {
         applyConstraints(node, field);
     }
 
+
+
+
+
     private void applyConstraints(SimpleMapNode node, Field field) {
         if (field.isAnnotationPresent(StringConstraint.class)) {
-            StringConstraint sc = field.getAnnotation(StringConstraint.class);
+            StringConstraint constraint = field.getAnnotation(StringConstraint.class);
 
-            if (sc.options().length > 0) {
+            if (constraint.options().length > 0) {
                 SimpleSequenceNode enumNode = new SimpleSequenceNode();
-                for (String opt : sc.options()) enumNode.add(scalar(opt));
-                node.put("enum", enumNode);
+                for (String opt : constraint.options()) {
+                    enumNode.add(scalar(opt));
+                }
+                node.put(SchemaKeyword.ENUM.string(), enumNode);
+            }
+            if (constraint.minLength() > -1) {
+                node.put(SchemaKeyword.MIN_LENGTH.string(), scalar(constraint.minLength()));
+            }
+            if (constraint.maxLength() > -1) {
+                node.put(SchemaKeyword.MAX_LENGTH.string(), scalar(constraint.maxLength()));
+            }
+            // TODO: pattern, regex rule
+        }
+
+        if (field.isAnnotationPresent(ReadOnly.class)) {
+            node.put(SchemaKeyword.READ_ONLY.string(), scalar(true));
+        }
+
+        if (field.isAnnotationPresent(NumberConstraint.class)) {
+            NumberConstraint constraint = field.getAnnotation(NumberConstraint.class);
+            if (constraint.min() != Double.NEGATIVE_INFINITY) {
+                node.put(SchemaKeyword.MINIMUM.string(), scalar(constraint.min()));
+            }
+            if (constraint.max() != Double.POSITIVE_INFINITY) {
+                node.put(SchemaKeyword.MAXIMUM.string(), scalar(constraint.max()));
             }
         }
-        if (field.isAnnotationPresent(ReadOnly.class)) {
-            node.put("readOnly", scalar(true));
-        }
-        // TODO: Range, number, enum, etc
     }
+
+
+
+
 
     private void appendDefaultValue(SimpleMapNode node, Field field, Object instance) {
         if (instance == null) return;

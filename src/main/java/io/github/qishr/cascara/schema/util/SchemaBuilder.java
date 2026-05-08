@@ -26,24 +26,20 @@ public class SchemaBuilder {
         generator.registerTypeAnalyzer(ta);
     }
 
-    public CompiledSchema buildSchema(String name, URI originUri, Class<?>... classes)  {
-        SimpleMapNode syntheticRoot;
+    public CompiledSchema buildSchema(URI originUri, Class<?>... classes)  {
         SimpleDocument syntheticRootDoc;
         CompiledSchema compiledSchema;
+        SimpleMapNode syntheticRoot = new SimpleMapNode();
         SimpleMapNode definitions = new SimpleMapNode();
-        syntheticRoot = new SimpleMapNode();
 
         syntheticRoot.put(SchemaKeyword.DEFS.string(), definitions);
-
         syntheticRoot.put(SchemaKeyword.ID.string(), new SimpleScalarNode(originUri));
-        syntheticRoot.put("name", new SimpleScalarNode(name));
 
-        for (Class<?> cls : classes) {
+        for (Class<?> clazz : classes) {
             // Give the generator the synthentic root AST and
             // tell it where generated definitions go within it.
-
             String fragment = "#/" + SchemaKeyword.DEFS.string();
-            generator.generate(syntheticRoot, fragment, cls);
+            generator.generate(syntheticRoot, fragment, clazz);
         }
 
         syntheticRootDoc = new SimpleDocument(syntheticRoot);

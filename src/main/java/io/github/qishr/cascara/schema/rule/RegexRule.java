@@ -18,11 +18,21 @@ public class RegexRule implements ValidationRule {
     @Override
     public void validate(AstNode node, String path, ValidationResult result) {
         if (node instanceof ScalarAstNode scalar) {
-            String value = String.valueOf(scalar.getPrimitiveValue());
-            if (!pattern.matcher(value).matches()) {
-                result.addError(path,
-                    "Value does not match the required pattern: " + patternString,
-                    node.getStartLine(), node.getStartColumn());
+            validateValue(scalar.getPrimitiveValue(), path, result, node.getStartLine(), node.getStartColumn());
+        }
+    }
+
+    @Override
+    public void validateValue(Object value, String path, ValidationResult result) {
+        validateValue(value, path, result, -1, -1);
+    }
+
+    private void validateValue(Object value, String path, ValidationResult result, int line, int col) {
+        if (value != null) {
+            String strValue = String.valueOf(value);
+            if (!pattern.matcher(strValue).matches()) {
+                String msg = "Value does not match the required pattern: " + patternString;
+                result.addError(path, msg, line, col);
             }
         }
     }

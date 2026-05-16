@@ -194,6 +194,19 @@ public final class ClassSchemaGenerator {
         appendDefaultValue(node, field, template);
 
         Class<?> type = field.getType();
+        if (field.getGenericType() instanceof ParameterizedType paramaterizedType) {
+            String typeName = paramaterizedType.getRawType().getTypeName();
+            Type[] paramTypes = paramaterizedType.getActualTypeArguments();
+            if (paramTypes.length != 1 || !typeName.equals("javafx.beans.property.ObjectProperty")) {
+                // TODO: If field is not ObjectProperty, continue from applyTypeAnalysis below
+                // return null; // TODO: Throw exception?
+            } else {
+                Type paramType = paramTypes[0];
+                if (paramType instanceof Class clazz) {
+                    type = clazz;
+                }
+            }
+        }
 
         applyTypeAnalysis(field, node);
         String analyzedType = node.getString("type");

@@ -64,7 +64,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         if (reporter == null) {
             this.reporter.error("Reporter must not be null");
         } else {
-            this.reporter = reporter.forClass(CascaraSchemaCompiler.class);
+            this.reporter = reporter;
         }
         return this;
     }

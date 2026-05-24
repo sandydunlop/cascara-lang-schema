@@ -5,30 +5,29 @@ import java.net.URI;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
-import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaKeyword;
-import io.github.qishr.cascara.schema.api.SchemaCompiler;
-import io.github.qishr.cascara.schema.api.SchemaResolver;
-import io.github.qishr.cascara.schema.api.TypeAnalyzer;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaGenerator;
 
 public class SchemaBuilder {
-    ClassSchemaGenerator generator;
+    CascaraSchemaGenerator generator;
     SchemaResolver resolver;
     SchemaCompiler compiler;
 
     public SchemaBuilder(SchemaResolver resolver) {
         this.resolver = resolver;
         compiler = new CascaraSchemaCompiler(resolver);
-        generator = new ClassSchemaGenerator();
+        generator = new CascaraSchemaGenerator();
     }
 
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
         generator.registerTypeAnalyzer(ta);
     }
 
-    public CompiledSchema buildSchema(URI originUri, Class<?>... classes)  {
+    public Schema buildSchema(URI originUri, Class<?>... classes)  {
         SimpleDocument syntheticRootDoc;
-        CompiledSchema compiledSchema;
+        Schema schema;
         SimpleMapNode syntheticRoot = new SimpleMapNode();
         SimpleMapNode definitions = new SimpleMapNode();
 
@@ -43,8 +42,8 @@ public class SchemaBuilder {
         }
 
         syntheticRootDoc = new SimpleDocument(syntheticRoot);
-        compiledSchema = compiler.compile(syntheticRootDoc);
+        schema = compiler.compile(syntheticRootDoc);
 
-        return compiledSchema;
+        return schema;
     }
 }

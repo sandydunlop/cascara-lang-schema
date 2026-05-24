@@ -1,7 +1,7 @@
 package io.github.qishr.cascara.schema.internal;
 
 import io.github.qishr.cascara.schema.SchemaType;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
 
 public final class SchemaNodeDumper {
 

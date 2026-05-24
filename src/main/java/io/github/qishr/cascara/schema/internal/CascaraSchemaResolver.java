@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.util;
+package io.github.qishr.cascara.schema.internal;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,19 +24,21 @@ import io.github.qishr.cascara.common.lang.processor.Parser;
 import io.github.qishr.cascara.common.spi.ParserFactory;
 import io.github.qishr.cascara.common.spi.ServiceException;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
-import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
-import io.github.qishr.cascara.schema.api.SchemaCompiler;
-import io.github.qishr.cascara.schema.api.SchemaResolver;
-import io.github.qishr.cascara.schema.api.TypeAnalyzer;
-import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
-import io.github.qishr.cascara.schema.ast.LazySchemaNode;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
-import io.github.qishr.cascara.schema.internal.SchemaUtils;
-import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
+import io.github.qishr.cascara.schema.structure.LazySchemaNode;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
+import io.github.qishr.cascara.schema.util.SchemaCompiler;
+import io.github.qishr.cascara.schema.util.SchemaResolver;
+import io.github.qishr.cascara.schema.util.SchemaStore;
+import io.github.qishr.cascara.schema.util.TypeAnalyzer;
+import io.github.qishr.cascara.schema.util.CascaraSchemaUri;
 import io.github.qishr.cascara.schema.util.CascaraSchemaUri.Lifecycle;
+import io.github.qishr.cascara.schema.util.DynamicScope;
 
 public class CascaraSchemaResolver implements SchemaResolver {
     private ContentLoader contentLoaderService;
@@ -44,7 +46,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
     private static final Map<URI,ResourceContent> metaSchemaResources = new HashMap<>();
 
     private final Map<URI, SchemaNode> schemaNodeCache = new HashMap<>();
-    private final Map<URI, CompiledSchema> schemaDocCache = new HashMap<>();
+    private final Map<URI, Schema> schemaDocCache = new HashMap<>();
 
     private final ThreadLocal<DynamicScope> currentScope = new ThreadLocal<>();
 
@@ -56,12 +58,12 @@ public class CascaraSchemaResolver implements SchemaResolver {
         loadBuiltInMetaSchemas();
     }
 
-    /// Returns the `CompiledSchema` indicated by the given `URI`.
-    /// If the `CompiledSchema` is cached, it will be retrieved from the cache,
+    /// Returns the `Schema` indicated by the given `URI`.
+    /// If the `Schema` is cached, it will be retrieved from the cache,
     /// otherwise it will be compiled and returned.
     @Override
-    public CompiledSchema getSchema(URI uri) throws SchemaException {
-        CompiledSchema schema = schemaDocCache.get(uri);
+    public Schema getSchema(URI uri) throws SchemaException {
+        Schema schema = schemaDocCache.get(uri);
         if (schema != null) return schema;
 
         ResourceContent content = null;
@@ -81,7 +83,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
         }
 
         StructuredDocument doc = parseContent(content);
-        SchemaCompiler compiler = new CascaraSchemaCompiler(this);
+        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(this);
         return compiler.compile(doc, uri);
     }
 
@@ -98,14 +100,14 @@ public class CascaraSchemaResolver implements SchemaResolver {
     }
 
     @Override
-    public CompiledSchema getSchemaForClass(Class<?> clazz) {
+    public Schema getSchemaForClass(Class<?> clazz) {
         return getSchemaForClass(clazz, null);
     }
 
     @Override
-    public CompiledSchema getSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) {
+    public Schema getSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) {
         URI uri = new CascaraSchemaUri(clazz).toUri();
-        CompiledSchema schema = schemaDocCache.get(uri);
+        Schema schema = schemaDocCache.get(uri);
         if (schema == null) {
             // This calls the compiler which adds the compiled schema to the cache
             return generateSchemaForClass(clazz, typeAnalyzers);
@@ -118,7 +120,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
     //
 
     @Override
-    public void registerSchema(URI uri, CompiledSchema compiled) {
+    public void registerSchema(URI uri, Schema compiled) {
         schemaDocCache.put(uri, compiled);
         if (UriScheme.of(uri) == UriScheme.CASCARA) {
             CascaraSchemaUri schemaUri = CascaraSchemaUri.of(uri);
@@ -134,7 +136,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
     }
 
     @Override
-    public Map<URI, CompiledSchema> getCachedSchemas() {
+    public Map<URI, Schema> getCachedSchemas() {
         return schemaDocCache;
     }
 
@@ -168,18 +170,18 @@ public class CascaraSchemaResolver implements SchemaResolver {
     // Private MEthods
     //
 
-    private CompiledSchema generateSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) throws SchemaException {
+    private Schema generateSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) throws SchemaException {
         URI originUri = new CascaraSchemaUri(clazz).toUri();
         SchemaCompiler compiler = new CascaraSchemaCompiler(this);
-        ClassSchemaGenerator generator = new ClassSchemaGenerator();
+        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
         if (typeAnalyzers != null) {
             for (TypeAnalyzer ta : typeAnalyzers) {
                 generator.registerTypeAnalyzer(ta);
             }
         }
         StructuredDocument schemaDoc = generator.generate(clazz);
-        CompiledSchema compiledSchema = compiler.compile(schemaDoc, originUri);
-        return compiledSchema;
+        Schema schema = compiler.compile(schemaDoc, originUri);
+        return schema;
     }
 
     /// Internal version that carries the scope
@@ -207,7 +209,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
 
         // 3. The Compiler/Document Load (Your existing logic)
         URI docUri = stripFragment(targetUri);
-        CompiledSchema schemaDoc = getSchema(docUri); // This triggers compilation if needed
+        Schema schemaDoc = getSchema(docUri); // This triggers compilation if needed
 
         // 4. Fragment Resolution
         String fragment = targetUri.getFragment();
@@ -223,7 +225,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return schemaNode;
     }
 
-    private SchemaNode resolveFragment(CompiledSchema schemaDoc, String fragment) {
+    private SchemaNode resolveFragment(Schema schemaDoc, String fragment) {
         return resolveFragment(schemaDoc, fragment, new DynamicScope(null));
     }
 
@@ -247,7 +249,7 @@ public class CascaraSchemaResolver implements SchemaResolver {
         return ref.substring(1);
     }
 
-    private SchemaNode resolveFragment(CompiledSchema schemaDoc, String fragment, DynamicScope scope) throws SchemaException {
+    private SchemaNode resolveFragment(Schema schemaDoc, String fragment, DynamicScope scope) throws SchemaException {
         if (fragment == null || fragment.isEmpty() || fragment.equals("/")) {
             return updateScope(schemaDoc.getRoot(), scope);
         }

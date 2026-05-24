@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.api;
+package io.github.qishr.cascara.schema.util;
 
 import java.lang.reflect.Field;
 

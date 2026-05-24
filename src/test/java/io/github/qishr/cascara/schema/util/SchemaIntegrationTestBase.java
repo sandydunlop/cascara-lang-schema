@@ -1,19 +1,13 @@
 package io.github.qishr.cascara.schema.util;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-
 import org.junit.jupiter.api.BeforeEach;
 
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
-import io.github.qishr.cascara.schema.api.SchemaParser;
-import io.github.qishr.cascara.schema.api.SchemaResolver;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
 
 public class SchemaIntegrationTestBase {
     // protected ContentLoader mockLoader;
-    protected SchemaParser jsonParser;
+    // protected SchemaParser jsonParser;
     protected SchemaResolver resolver;
 
     @BeforeEach
@@ -21,7 +15,7 @@ public class SchemaIntegrationTestBase {
         // mockLoader = mock(ContentLoader.class);
 
         // Bridge: extract the 'content' string from the record to feed the JsonParser
-        jsonParser = resource -> new JsonParser().parse(resource.content());
+        // jsonParser = resource -> new JsonParser().parse(resource.content());
 
         // System Under Test
         resolver = new CascaraSchemaResolver();

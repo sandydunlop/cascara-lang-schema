@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.ast;
+package io.github.qishr.cascara.schema.structure;
 
 import io.github.qishr.cascara.common.lang.annotation.Nullable;
 import io.github.qishr.cascara.common.lang.ast.AstNode;

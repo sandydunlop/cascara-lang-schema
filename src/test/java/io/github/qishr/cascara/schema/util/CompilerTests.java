@@ -8,10 +8,13 @@ import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.lang.json.JsonDocument;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
-import io.github.qishr.cascara.schema.CompiledSchema;
-import io.github.qishr.cascara.schema.ast.LazySchemaNode;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.Schema;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.internal.CompiledSchema;
+import io.github.qishr.cascara.schema.structure.LazySchemaNode;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
 
 public class CompilerTests {
     @Test
@@ -30,7 +33,7 @@ public class CompilerTests {
 
         CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
-        CompiledSchema schema = compiler.compile(doc);
+        Schema schema = compiler.compile(doc);
 
         ObjectSchemaNode taskNode = (ObjectSchemaNode) schema.getDefinition("task");
 
@@ -50,7 +53,7 @@ public class CompilerTests {
 
         CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
-        CompiledSchema schema = compiler.compile(doc);
+        Schema schema = compiler.compile(doc);
 
         ObjectSchemaNode taskNode = (ObjectSchemaNode) schema.getDefinition("task");
 

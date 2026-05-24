@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.ast;
+package io.github.qishr.cascara.schema.structure;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;

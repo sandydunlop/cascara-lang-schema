@@ -1,7 +1,10 @@
-package io.github.qishr.cascara.schema.util;
+package io.github.qishr.cascara.schema.internal;
 
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
+import io.github.qishr.cascara.schema.util.CascaraSchemaUri;
+import io.github.qishr.cascara.schema.util.SchemaGenerator;
+import io.github.qishr.cascara.schema.util.TypeAnalyzer;
 import io.github.qishr.cascara.common.lang.annotation.DataField;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
@@ -9,17 +12,15 @@ import io.github.qishr.cascara.common.lang.simple.*;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
 import io.github.qishr.cascara.schema.annotation.ContentMediaType;
 import io.github.qishr.cascara.schema.annotation.SchemaDefinition;
-import io.github.qishr.cascara.schema.api.TypeAnalyzer;
 import io.github.qishr.cascara.schema.constraint.NumberConstraint;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
-import io.github.qishr.cascara.schema.internal.SchemaUtils;
 
 import java.lang.reflect.*;
 import java.net.URI;
 import java.util.*;
 
-public final class ClassSchemaGenerator {
+public final class CascaraSchemaGenerator implements SchemaGenerator {
 
     private static final String ARRAY = "array";
     private static final String BOOLEAN = "boolean";
@@ -194,6 +195,19 @@ public final class ClassSchemaGenerator {
         appendDefaultValue(node, field, template);
 
         Class<?> type = field.getType();
+        if (field.getGenericType() instanceof ParameterizedType paramaterizedType) {
+            String typeName = paramaterizedType.getRawType().getTypeName();
+            Type[] paramTypes = paramaterizedType.getActualTypeArguments();
+            if (paramTypes.length != 1 || !typeName.equals("javafx.beans.property.ObjectProperty")) {
+                // TODO: If field is not ObjectProperty, continue from applyTypeAnalysis below
+                // return null; // TODO: Throw exception?
+            } else {
+                Type paramType = paramTypes[0];
+                if (paramType instanceof Class clazz) {
+                    type = clazz;
+                }
+            }
+        }
 
         applyTypeAnalysis(field, node);
         String analyzedType = node.getString("type");

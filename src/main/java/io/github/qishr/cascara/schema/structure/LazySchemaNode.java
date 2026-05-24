@@ -1,11 +1,11 @@
-package io.github.qishr.cascara.schema.ast;
+package io.github.qishr.cascara.schema.structure;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaType;
-import io.github.qishr.cascara.schema.api.SchemaResolver;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
 import io.github.qishr.cascara.schema.util.DynamicScope;
+import io.github.qishr.cascara.schema.util.SchemaResolver;
 import io.github.qishr.cascara.schema.util.ValidationResult;
 
 import java.net.URI;

@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.util;
+package io.github.qishr.cascara.schema.internal;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -10,14 +10,10 @@ import io.github.qishr.cascara.common.lang.simple.SimpleMapEntryNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
-import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.SchemaType;
-import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
-import io.github.qishr.cascara.schema.ast.LazySchemaNode;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
 import io.github.qishr.cascara.schema.rule.EnumRule;
 import io.github.qishr.cascara.schema.rule.MaxItemsRule;
 import io.github.qishr.cascara.schema.rule.MaxValueRule;
@@ -25,8 +21,13 @@ import io.github.qishr.cascara.schema.rule.MinItemsRule;
 import io.github.qishr.cascara.schema.rule.MinValueRule;
 import io.github.qishr.cascara.schema.rule.RequiredRule;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
+import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
+import io.github.qishr.cascara.schema.structure.LazySchemaNode;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
+import io.github.qishr.cascara.schema.util.SchemaDecompiler;
 
-public final class CascaraSchemaDecompiler {
+public final class CascaraSchemaDecompiler implements SchemaDecompiler {
     private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema";
     private static final String ARRAY = "array";
     private static final String OBJECT = "object";
@@ -49,7 +50,7 @@ public final class CascaraSchemaDecompiler {
 
     private URI originUri;
 
-    public SimpleDocument decompile(CompiledSchema compiled) {
+    public SimpleDocument decompile(Schema compiled) {
         if (compiled == null || compiled.getRoot() == null) return null;
 
         SchemaNode compiledRoot = compiled.getRoot();

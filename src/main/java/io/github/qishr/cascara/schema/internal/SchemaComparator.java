@@ -3,7 +3,7 @@ package io.github.qishr.cascara.schema.internal;
 import java.util.Map;
 import java.util.Objects;
 
-import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
 
 public final class SchemaComparator {
 

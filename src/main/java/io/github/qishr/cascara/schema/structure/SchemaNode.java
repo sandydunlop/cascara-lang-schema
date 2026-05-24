@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.ast;
+package io.github.qishr.cascara.schema.structure;
 
 import java.net.URI;
 import java.util.List;

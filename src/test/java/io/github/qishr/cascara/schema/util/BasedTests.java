@@ -1,7 +1,6 @@
 package io.github.qishr.cascara.schema.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -9,28 +8,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.net.URI;
 
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
-import io.github.qishr.cascara.common.lang.ast.MapAstNode;
-import io.github.qishr.cascara.common.lang.ast.MapEntryAstNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
-import io.github.qishr.cascara.lang.json.ast.JsonScalarNode;
-import io.github.qishr.cascara.schema.ast.LazySchemaNode;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.ScalarSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
-import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.structure.LazySchemaNode;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.ScalarSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
+import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaType;
-import io.github.qishr.cascara.schema.api.SchemaParser;
-import io.github.qishr.cascara.common.io.ContentLoader;
-import io.github.qishr.cascara.common.content.ResourceContent;
 
 public class BasedTests extends SchemaIntegrationTestBase {
 
@@ -73,7 +67,7 @@ public class BasedTests extends SchemaIntegrationTestBase {
         rootAst.put("$id", new SimpleScalarNode("file:///schema.json"));
         rootAst.put("definitions", defsAst);
 
-        CompiledSchema compiled = compiler.compile(new SimpleDocument(rootAst));
+        Schema compiled = compiler.compile(new SimpleDocument(rootAst));
         ObjectSchemaNode rootSchema = (ObjectSchemaNode) compiled.getRoot();
 
         SchemaNode result = localResolver.resolve("#/definitions/address", rootSchema);

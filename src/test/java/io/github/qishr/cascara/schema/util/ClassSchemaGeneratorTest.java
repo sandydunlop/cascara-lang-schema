@@ -1,7 +1,13 @@
 package io.github.qishr.cascara.schema.util;
 
+import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
+import io.github.qishr.cascara.lang.json.processor.JsonConverter;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaGenerator;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
 
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +42,7 @@ class ClassSchemaGeneratorTest {
     }
 
 
-    private final ClassSchemaGenerator generator = new ClassSchemaGenerator();
+    private final CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
 
     @Test
     void rootHasCorrectNameAndType() {
@@ -107,15 +113,19 @@ class ClassSchemaGeneratorTest {
         CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
-
         var schema1 = compiler.compile(doc1, URI.create("runtime://schema1"));
-        var schema2 = compiler.compile(doc2, URI.create("runtime://schema2"));
+        var schema2 = compiler.compile(doc2, URI.create("runtime://schema1"));
 
-        var toPlain = new SchemaNodeToPlain();
-        var plain1 = toPlain.toPlain(schema1.getRoot());
-        var plain2 = toPlain.toPlain(schema2.getRoot());
+        JsonConverter converter = new JsonConverter();
+        CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
 
-        assertEquals(plain1, plain2);
+        StructuredDocument doc1a = decompiler.decompile(schema1);
+        String json1 = converter.toText(doc1a);
+
+        StructuredDocument doc2a = decompiler.decompile(schema2);
+        String json2 = converter.toText(doc2a);
+
+        assertEquals(json1, json2);
     }
 
     //

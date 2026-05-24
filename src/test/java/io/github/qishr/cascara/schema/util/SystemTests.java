@@ -13,10 +13,14 @@ import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.lang.json.JsonDocument;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
-import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaType;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.internal.CompiledSchema;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
 
 public class SystemTests {
     CascaraSchemaResolver resolver;
@@ -79,7 +83,7 @@ public class SystemTests {
             """;
 
         JsonDocument doc = new JsonParser().parse(json);
-        CompiledSchema compiled = compiler.compile(doc);
+        Schema compiled = compiler.compile(doc);
 
         // 2. Resolve the "task" node
         ObjectSchemaNode taskNode = (ObjectSchemaNode) resolver.resolve("#/$defs/task", compiled.getRoot());
@@ -190,7 +194,7 @@ public class SystemTests {
             """;
 
         JsonDocument doc = new JsonParser().parse(json);
-        CompiledSchema compiled = compiler.compile(doc);
+        Schema compiled = compiler.compile(doc);
         CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
         MapAstNode<?,?> root = decompiler.decompile(compiled).getRoot();
         if (root.get("$defs") instanceof MapAstNode defs) {

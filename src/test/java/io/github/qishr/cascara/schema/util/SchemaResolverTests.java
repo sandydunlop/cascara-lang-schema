@@ -16,12 +16,15 @@ import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
-import io.github.qishr.cascara.schema.CompiledSchema;
-import io.github.qishr.cascara.schema.api.SchemaCompiler;
-import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
-import io.github.qishr.cascara.schema.ast.LazySchemaNode;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.Schema;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.internal.CompiledSchema;
+import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
+import io.github.qishr.cascara.schema.structure.LazySchemaNode;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
 
 public class SchemaResolverTests {
     CascaraSchemaResolver resolver;
@@ -69,7 +72,7 @@ public class SchemaResolverTests {
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         compiler.compile(tagDoc); // This automatically registers it with the resolver
-        CompiledSchema taskSchema = compiler.compile(taskDoc);
+        Schema taskSchema = compiler.compile(taskDoc);
         assertNotNull(taskSchema);
     }
 
@@ -111,7 +114,7 @@ public class SchemaResolverTests {
         StructuredDocument doc = parser.parse(json);
         CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         SchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
-        CompiledSchema schema = compiler.compile(doc);
+        Schema schema = compiler.compile(doc);
 
         SchemaNode bug = schema.getDefinition("bug");
         if (bug instanceof ObjectSchemaNode obj) {
@@ -149,12 +152,12 @@ public class SchemaResolverTests {
 
         // 2. Register it as a compiled schema (simulating what the compiler does)
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
-        CompiledSchema compiled = compiler.compile(doc, uri);
+        Schema compiled = compiler.compile(doc, uri);
         resolver.registerSchema(uri, compiled);
 
         // 3. Verify retrieval works through the correct interface
         assertDoesNotThrow(() -> {
-            CompiledSchema retrieved = resolver.getSchema(uri);
+            Schema retrieved = resolver.getSchema(uri);
             assertNotNull(retrieved);
             assertEquals(uri, retrieved.getRoot().getOriginUri());
         });
@@ -178,7 +181,7 @@ public class SchemaResolverTests {
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         // Compiling the document should populate the Resolver's caches
-        CompiledSchema compiled = compiler.compile(doc, docUri);
+        Schema compiled = compiler.compile(doc, docUri);
         resolver.registerSchema(docUri, compiled);
 
         // Verify the document cache
@@ -214,7 +217,7 @@ public class SchemaResolverTests {
         JsonParser parser = new JsonParser();
         StructuredDocument doc = parser.parse(json);
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
-        CompiledSchema compiled = compiler.compile(doc, docUri);
+        Schema compiled = compiler.compile(doc, docUri);
         resolver.registerSchema(docUri, compiled);
 
         // 4. Attempt to resolve the fragment.
@@ -257,7 +260,7 @@ public class SchemaResolverTests {
         JsonParser parser = new JsonParser();
         StructuredDocument doc = parser.parse(json);
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
-        CompiledSchema compiled = compiler.compile(doc, docUri);
+        Schema compiled = compiler.compile(doc, docUri);
         resolver.registerSchema(docUri, compiled);
 
         // This will fail if findNodeByAst skips the LazySchemaNode representing 'node'
@@ -270,7 +273,7 @@ public class SchemaResolverTests {
     @Test
     void reproduceMetaSchemaResolutionFailure() {
         URI uri = URI.create("https://json-schema.org/draft/2020-12/schema");
-        CompiledSchema schema = resolver.getSchema(uri);
+        Schema schema = resolver.getSchema(uri);
         for (SchemaNode prop : schema.getProperties()){
             if (prop instanceof LazySchemaNode lazy) {
                 lazy.getResolved();
@@ -281,7 +284,7 @@ public class SchemaResolverTests {
     @Test
     void test_metaValidation() {
         URI uri = URI.create("https://json-schema.org/draft/2020-12/meta/validation");
-        CompiledSchema schema = resolver.getSchema(uri);
+        Schema schema = resolver.getSchema(uri);
 
         if (schema.getProperty("minLength") instanceof LazySchemaNode lazy) {
             lazy.getResolved();
@@ -310,7 +313,7 @@ public class SchemaResolverTests {
         StructuredDocument doc = new SimpleDocument(rootAst);
 
         // 2. COMPILE: First pass
-        CompiledSchema original = compiler.compile(doc, URI.create("cascara://test"));
+        Schema original = compiler.compile(doc, URI.create("cascara://test"));
 
         // 3. DECOMPILE: Move from Compiled Graph back to AST
         CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
@@ -318,7 +321,7 @@ public class SchemaResolverTests {
 
         // 4. RE-COMPILE: Re-hydrate the AST back into a Compiled Schema
         // This is where the Migration Service was failing
-        CompiledSchema recompiled = compiler.compile(new SimpleDocument(decompiledAst), URI.create("cascara://test"));
+        Schema recompiled = compiler.compile(new SimpleDocument(decompiledAst), URI.create("cascara://test"));
 
         // 5. ASSERT: Verify the graph is still traversable
         // We use the resolver directly to ensure the fragment logic is sound

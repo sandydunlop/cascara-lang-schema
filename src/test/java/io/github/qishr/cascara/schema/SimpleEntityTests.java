@@ -12,25 +12,25 @@ import org.junit.jupiter.api.Test;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
-import io.github.qishr.cascara.schema.api.SchemaCompiler;
-import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
-import io.github.qishr.cascara.schema.ast.LazySchemaNode;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.ScalarSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
-import io.github.qishr.cascara.schema.util.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
-import io.github.qishr.cascara.schema.util.ClassSchemaGenerator;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaGenerator;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
+import io.github.qishr.cascara.schema.structure.LazySchemaNode;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.ScalarSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
+import io.github.qishr.cascara.schema.util.SchemaCompiler;
 
 public class SimpleEntityTests {
     @Test
     public void simpleEntity_has_scalar_fields() {
-        ClassSchemaGenerator generator = new ClassSchemaGenerator();
+        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
         CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         SimpleDocument doc = generator.generate(SimpleEntity.class);
-        CompiledSchema schema = compiler.compile(doc, URI.create("runtime://schema"));
+        Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
 
         Map<String, SchemaNode> props = schema.getRoot().getProperties();
 
@@ -40,11 +40,11 @@ public class SimpleEntityTests {
 
     @Test
     public void refEntity_distinguishes_single_and_collection_references() {
-        ClassSchemaGenerator generator = new ClassSchemaGenerator();
+        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
         SchemaCompiler compiler = new CascaraSchemaCompiler(new CascaraSchemaResolver());
 
         SimpleDocument doc = generator.generate(RefEntity.class);
-        CompiledSchema schema = compiler.compile(doc, URI.create("runtime://schema"));
+        Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
 
         SchemaNode child = schema.getRoot().getProperties().get("child");
         SchemaNode children = schema.getRoot().getProperties().get("children");
@@ -74,12 +74,12 @@ public class SimpleEntityTests {
 
     @Test
     public void ignoreEntity_ignores_dataignore_fields() {
-        ClassSchemaGenerator generator = new ClassSchemaGenerator();
+        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
         CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         SimpleDocument doc = generator.generate(IgnoreEntity.class);
-        CompiledSchema schema = compiler.compile(doc, URI.create("runtime://schema"));
+        Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
 
         Map<String, SchemaNode> props = schema.getRoot().getProperties();
 
@@ -89,14 +89,14 @@ public class SimpleEntityTests {
 
     @Test
     public void array_reference_is_marked_as_collection() {
-        ClassSchemaGenerator generator = new ClassSchemaGenerator();
+        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
         // TestResolver resolver = new TestResolver();
         CascaraSchemaResolver resolver = new CascaraSchemaResolver() ;
         SchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
         URI uri = URI.create("runtime://schema");
         SimpleDocument doc = generator.generate(RefEntity.class);
-        CompiledSchema schema = compiler.compile(doc, uri);
+        Schema schema = compiler.compile(doc, uri);
 
         SchemaNode children = schema.getRoot().getProperties().get("children");
         ArraySchemaNode arr = (ArraySchemaNode) children;

@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.ast;
+package io.github.qishr.cascara.schema.structure;
 
 import java.util.Collections;
 import java.util.Map;

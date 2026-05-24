@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.ast;
+package io.github.qishr.cascara.schema.structure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
-import io.github.qishr.cascara.schema.CompiledSchema;
-import io.github.qishr.cascara.schema.util.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.util.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.Schema;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
 
 public class UriTests {
     @Test
@@ -25,7 +25,7 @@ public class UriTests {
         CascaraSchemaResolver resolver = new CascaraSchemaResolver();
         CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
 
-        CompiledSchema schema = compiler.compile(doc);
+        Schema schema = compiler.compile(doc);
 
         URI schemaUri = schema.getOriginUri();
         assertEquals(uri, schemaUri);

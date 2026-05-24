@@ -10,8 +10,11 @@ import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
-import io.github.qishr.cascara.schema.CompiledSchema;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.Schema;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.internal.CompiledSchema;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
 
 public class SchemaCompilerTests {
 
@@ -49,7 +52,7 @@ public class SchemaCompilerTests {
         root.put("$id", new SimpleScalarNode("cascara://core/schema-service/dynamic/cascara.schema/compiler-unevaluated-test"));
         root.put("definitions", defs);
 
-        CompiledSchema compiled = compiler.compile(new SimpleDocument(root));
+        Schema compiled = compiler.compile(new SimpleDocument(root));
 
         ObjectSchemaNode childNode = (ObjectSchemaNode) compiled.getRoot()
                 .getDefinition("child");
@@ -91,7 +94,7 @@ public class SchemaCompilerTests {
         root.put("$id", new SimpleScalarNode("cascara://core/schema-service/dynamic/cascara.schema/compiler-flatten-test"));
         root.put("definitions", defs);
 
-        CompiledSchema compiled = compiler.compile(new SimpleDocument(root));
+        Schema compiled = compiler.compile(new SimpleDocument(root));
 
         ObjectSchemaNode childNode = (ObjectSchemaNode) compiled.getRoot()
                 .getDefinition("child");
@@ -108,7 +111,7 @@ public class SchemaCompilerTests {
         root.put("type", new SimpleScalarNode("object"));
         root.put("additionalProperties", new SimpleScalarNode(false));
 
-        CompiledSchema compiled = compiler.compile(new SimpleDocument(root));
+        Schema compiled = compiler.compile(new SimpleDocument(root));
         ObjectSchemaNode rootNode = (ObjectSchemaNode) compiled.getRoot();
 
         assertFalse(rootNode.areAdditionalPropertiesAllowed());

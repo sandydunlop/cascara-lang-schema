@@ -10,8 +10,9 @@ import io.github.qishr.cascara.common.content.ResourceContent;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.spi.ContentTypes;
 import io.github.qishr.cascara.lang.json.processor.JsonConverter;
-import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaException;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
 import io.github.qishr.cascara.schema.util.CascaraSchemaUri.Lifecycle;
 
 public class SchemaStore {
@@ -52,7 +53,7 @@ public class SchemaStore {
         return rc;
     }
 
-    public void put(CascaraSchemaUri schemaUri, CompiledSchema compiled) {
+    public void put(CascaraSchemaUri schemaUri, Schema compiled) {
         if (schemaUri.getLifecycle() == Lifecycle.DYNAMIC) {
             throw illegalLifecycle(schemaUri);
         }

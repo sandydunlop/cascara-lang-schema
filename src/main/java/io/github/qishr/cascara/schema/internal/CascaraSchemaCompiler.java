@@ -1,4 +1,4 @@
-package io.github.qishr.cascara.schema.util;
+package io.github.qishr.cascara.schema.internal;
 
 
 import java.net.URI;
@@ -15,17 +15,10 @@ import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.MapEntryAstNode;
 import io.github.qishr.cascara.common.lang.ast.ScalarAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
-import io.github.qishr.cascara.schema.CompiledSchema;
+import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.SchemaType;
-import io.github.qishr.cascara.schema.api.SchemaCompiler;
-import io.github.qishr.cascara.schema.api.SchemaResolver;
-import io.github.qishr.cascara.schema.ast.ArraySchemaNode;
-import io.github.qishr.cascara.schema.ast.BaseSchemaNode;
-import io.github.qishr.cascara.schema.ast.LazySchemaNode;
-import io.github.qishr.cascara.schema.ast.ObjectSchemaNode;
-import io.github.qishr.cascara.schema.ast.ScalarSchemaNode;
-import io.github.qishr.cascara.schema.ast.SchemaNode;
+import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
 import io.github.qishr.cascara.schema.rule.EnumRule;
 import io.github.qishr.cascara.schema.rule.MaxItemsRule;
 import io.github.qishr.cascara.schema.rule.MaxLengthRule;
@@ -34,21 +27,29 @@ import io.github.qishr.cascara.schema.rule.MinItemsRule;
 import io.github.qishr.cascara.schema.rule.MinLengthRule;
 import io.github.qishr.cascara.schema.rule.MinValueRule;
 import io.github.qishr.cascara.schema.rule.RequiredRule;
-import io.github.qishr.cascara.schema.util.CascaraSchemaCompiler;
+import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
+import io.github.qishr.cascara.schema.structure.BaseSchemaNode;
+import io.github.qishr.cascara.schema.structure.LazySchemaNode;
+import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
+import io.github.qishr.cascara.schema.structure.ScalarSchemaNode;
+import io.github.qishr.cascara.schema.structure.SchemaNode;
+import io.github.qishr.cascara.schema.util.DynamicScope;
+import io.github.qishr.cascara.schema.util.SchemaCompiler;
+import io.github.qishr.cascara.schema.util.SchemaResolver;
 
 public class CascaraSchemaCompiler implements SchemaCompiler {
     private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema";
 
     // TODO: These should be in a TypeAnalyzer
     private static final String ABSOLUTE = "absolute";
-    private static final String EXTENSIONS = "extensions";
+    // private static final String EXTENSIONS = "extensions";
     private static final String NAME = "name";
 
     // Default names for things
     private static final String ROOT = "root";
     private static final String ITEM = "item";
 
-    private final SchemaResolver resolver;
+    private SchemaResolver resolver;
     private Reporter reporter = new SimpleReporter();
 
     @Deprecated
@@ -60,6 +61,11 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         this.resolver = resolver;
     }
 
+    public CascaraSchemaCompiler() {
+
+    }
+
+    @Override
     public CascaraSchemaCompiler setReporter(Reporter reporter) {
         if (reporter == null) {
             this.reporter.error("Reporter must not be null");
@@ -70,12 +76,18 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
     }
 
     @Override
-    public CompiledSchema compile(StructuredDocument doc) {
+    public CascaraSchemaCompiler setResolver(SchemaResolver resolver) {
+        this.resolver = resolver;
+        return this;
+    }
+
+    @Override
+    public Schema compile(StructuredDocument doc) {
         return compile(doc, doc.getOriginUri());
     }
 
     @Override
-    public CompiledSchema compile(StructuredDocument doc, URI originUri) {
+    public Schema compile(StructuredDocument doc, URI originUri) {
         if (doc == null) {
             reporter.error("Document must not be null");
             return null;
@@ -121,7 +133,7 @@ public class CascaraSchemaCompiler implements SchemaCompiler {
         SchemaNode metaRoot = null;
         if (!originUri.equals(metaUri)) {
             try {
-                CompiledSchema metaDoc = resolver.getSchema(metaUri);
+                Schema metaDoc = resolver.getSchema(metaUri);
                 metaRoot = metaDoc.getRoot();
             } catch (Exception e) {
                 reporter.warn("Could not resolve meta-schema: " + metaUri);

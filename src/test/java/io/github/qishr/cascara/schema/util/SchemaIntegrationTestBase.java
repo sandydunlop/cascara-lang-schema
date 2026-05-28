@@ -2,8 +2,7 @@ package io.github.qishr.cascara.schema.util;
 
 import org.junit.jupiter.api.BeforeEach;
 
-import io.github.qishr.cascara.lang.json.processor.JsonParser;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.internal.SchemaResolver;
 
 public class SchemaIntegrationTestBase {
     // protected ContentLoader mockLoader;
@@ -18,7 +17,7 @@ public class SchemaIntegrationTestBase {
         // jsonParser = resource -> new JsonParser().parse(resource.content());
 
         // System Under Test
-        resolver = new CascaraSchemaResolver();
+        resolver = new SchemaResolver();
     }
 
     // protected void mockRemoteFile(String uri, String contentStr) throws IOException {

@@ -9,27 +9,22 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.lang.json.JsonDocument;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaType;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
-import io.github.qishr.cascara.schema.internal.CompiledSchema;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.structure.SchemaNode;
 
 public class SystemTests {
-    CascaraSchemaResolver resolver;
-    CascaraSchemaCompiler compiler;
+    SchemaResolver resolver;
+    SchemaCompiler compiler;
 
     @BeforeEach
     void setup() {
-        resolver = new CascaraSchemaResolver();
-        compiler = new CascaraSchemaCompiler(resolver);
+        resolver = new SchemaResolver();
+        compiler = new SchemaCompiler(resolver);
     }
 
     @Test
@@ -195,7 +190,7 @@ public class SystemTests {
 
         JsonDocument doc = new JsonParser().parse(json);
         Schema compiled = compiler.compile(doc);
-        CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
+        SchemaDecompiler decompiler = new SchemaDecompiler();
         MapAstNode<?,?> root = decompiler.decompile(compiled).getRoot();
         if (root.get("$defs") instanceof MapAstNode defs) {
             if (defs.get("releasedModule") instanceof MapAstNode rm) {

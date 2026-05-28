@@ -4,10 +4,6 @@ import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.lang.json.processor.JsonConverter;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaGenerator;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
 
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +38,7 @@ class ClassSchemaGeneratorTest {
     }
 
 
-    private final CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
+    private final SchemaGenerator generator = new SchemaGenerator();
 
     @Test
     void rootHasCorrectNameAndType() {
@@ -110,14 +106,14 @@ class ClassSchemaGeneratorTest {
         var doc1 = generator.generate(SimpleEntity.class);
         var doc2 = generator.generate(SimpleEntity.class);
 
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaResolver resolver = new SchemaResolver();
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         var schema1 = compiler.compile(doc1, URI.create("runtime://schema1"));
         var schema2 = compiler.compile(doc2, URI.create("runtime://schema1"));
 
         JsonConverter converter = new JsonConverter();
-        CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
+        SchemaDecompiler decompiler = new SchemaDecompiler();
 
         StructuredDocument doc1a = decompiler.decompile(schema1);
         String json1 = converter.toText(doc1a);

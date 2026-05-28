@@ -11,15 +11,12 @@ import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
 import io.github.qishr.cascara.schema.Schema;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
-import io.github.qishr.cascara.schema.internal.CompiledSchema;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
 
 public class SchemaCompilerTests {
 
-    private CascaraSchemaResolver resolver = new CascaraSchemaResolver();
-    private CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+    private SchemaResolver resolver = new SchemaResolver();
+    private SchemaCompiler compiler = new SchemaCompiler(resolver);
 
 
 

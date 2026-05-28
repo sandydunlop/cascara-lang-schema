@@ -16,8 +16,6 @@ import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
 import io.github.qishr.cascara.schema.structure.LazySchemaNode;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.structure.ScalarSchemaNode;
@@ -30,7 +28,7 @@ public class BasedTests extends SchemaIntegrationTestBase {
 
     @Test
     void testLazyNodeTriggeringResolution() throws SchemaException {
-        CascaraSchemaResolver mockResolver = mock(CascaraSchemaResolver.class);
+        SchemaResolver mockResolver = mock(SchemaResolver.class);
         AstNode mockAst = mock(AstNode.class);
         URI baseUri = URI.create("https://myserver.com/schema.json");
         SchemaNode mockMeta = mock(SchemaNode.class);
@@ -54,8 +52,8 @@ public class BasedTests extends SchemaIntegrationTestBase {
 
     @Test
     void testInternalFragmentResolution() {
-        CascaraSchemaResolver localResolver = new CascaraSchemaResolver();
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(localResolver);
+        SchemaResolver localResolver = new SchemaResolver();
+        SchemaCompiler compiler = new SchemaCompiler(localResolver);
 
         SimpleMapNode addrAst = new SimpleMapNode();
         addrAst.put("type", new SimpleScalarNode("string"));

@@ -12,9 +12,8 @@ import org.junit.jupiter.api.Test;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaGenerator;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.util.SchemaGenerator;
+import io.github.qishr.cascara.schema.util.SchemaResolver;
 import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
 import io.github.qishr.cascara.schema.structure.LazySchemaNode;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
@@ -25,9 +24,9 @@ import io.github.qishr.cascara.schema.util.SchemaCompiler;
 public class SimpleEntityTests {
     @Test
     public void simpleEntity_has_scalar_fields() {
-        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaGenerator generator = new SchemaGenerator();
+        SchemaResolver resolver = new SchemaResolver();
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         SimpleDocument doc = generator.generate(SimpleEntity.class);
         Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
@@ -40,8 +39,8 @@ public class SimpleEntityTests {
 
     @Test
     public void refEntity_distinguishes_single_and_collection_references() {
-        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
-        SchemaCompiler compiler = new CascaraSchemaCompiler(new CascaraSchemaResolver());
+        SchemaGenerator generator = new SchemaGenerator();
+        SchemaCompiler compiler = new SchemaCompiler(new SchemaResolver());
 
         SimpleDocument doc = generator.generate(RefEntity.class);
         Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
@@ -74,9 +73,9 @@ public class SimpleEntityTests {
 
     @Test
     public void ignoreEntity_ignores_dataignore_fields() {
-        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaGenerator generator = new SchemaGenerator();
+        SchemaResolver resolver = new SchemaResolver();
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         SimpleDocument doc = generator.generate(IgnoreEntity.class);
         Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
@@ -89,10 +88,10 @@ public class SimpleEntityTests {
 
     @Test
     public void array_reference_is_marked_as_collection() {
-        CascaraSchemaGenerator generator = new CascaraSchemaGenerator();
+        SchemaGenerator generator = new SchemaGenerator();
         // TestResolver resolver = new TestResolver();
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver() ;
-        SchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaResolver resolver = new SchemaResolver() ;
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         URI uri = URI.create("runtime://schema");
         SimpleDocument doc = generator.generate(RefEntity.class);

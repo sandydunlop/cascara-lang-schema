@@ -2,7 +2,6 @@ package io.github.qishr.cascara.schema.util;
 
 import org.junit.jupiter.api.BeforeEach;
 
-import io.github.qishr.cascara.schema.internal.SchemaResolver;
 
 public class SchemaIntegrationTestBase {
     // protected ContentLoader mockLoader;

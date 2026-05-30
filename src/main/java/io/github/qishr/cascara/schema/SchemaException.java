@@ -2,17 +2,12 @@ package io.github.qishr.cascara.schema;
 
 import java.net.URI;
 
-import io.github.qishr.cascara.common.lang.exception.LanguageException;
 import io.github.qishr.cascara.common.lang.exception.LocatableException;
-import io.github.qishr.cascara.common.util.CascaraRuntimeException;
 
-public class SchemaException extends CascaraRuntimeException implements LocatableException {
-    private static final int UNKNOWN_COORD = LanguageException.UNKNOWN_COORD;
+public class SchemaException extends LocatableException {
+    private static final int UNKNOWN_COORD = LocatableException.UNKNOWN_COORD;
 
     private final String schemaPath;
-    private final int line;
-    private final int column;
-    private final URI uri;
     private final String rawMessage;
 
     /// For errors in a schema for a class.
@@ -64,17 +59,11 @@ public class SchemaException extends CascaraRuntimeException implements Locatabl
     }
 
     private SchemaException(String rawMessage, String message, Throwable cause, Class<?> clazz, String schemaPath, int line, int column, URI uri) {
-        super(message, cause);
-        this.rawMessage = message;
+        super(message, cause, line, column, uri);
+        this.rawMessage = rawMessage;
         this.schemaPath = schemaPath;
-        this.line = line;
-        this.column = column;
-        this.uri = uri;
     }
 
-    @Override public int getLine() { return line; }
-    @Override public int getColumn() { return column; }
-    @Override public URI getUri() { return uri; }
     public String getSchemaPath() { return schemaPath; }
     public String getRawMessage() { return rawMessage; }
 }

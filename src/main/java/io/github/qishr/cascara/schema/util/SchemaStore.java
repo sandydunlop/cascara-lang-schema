@@ -79,7 +79,8 @@ public class SchemaStore {
     }
 
     private Path getPath(CascaraSchemaUri schemaUri) throws SchemaException {
-        Path schemaDir = schemasDir.resolve(schemaUri.getModuleName(), schemaUri.getSchemaName());
+        Path moduleDir = schemasDir.resolve(schemaUri.getModuleName());
+        Path schemaDir = moduleDir.resolve(schemaUri.getSchemaName());
 
         Path versionDir;
         if (schemaUri.getLifecycle() == Lifecycle.RESOURCE) {

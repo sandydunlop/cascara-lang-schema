@@ -10,8 +10,8 @@ import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
 import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.schema.Schema;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
+import io.github.qishr.cascara.schema.util.SchemaCompiler;
+import io.github.qishr.cascara.schema.util.SchemaResolver;
 
 public class UriTests {
     @Test
@@ -22,8 +22,8 @@ public class UriTests {
         root.put("$id", id);
         SimpleDocument doc = new SimpleDocument(root);
 
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaResolver resolver = new SchemaResolver();
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         Schema schema = compiler.compile(doc);
 

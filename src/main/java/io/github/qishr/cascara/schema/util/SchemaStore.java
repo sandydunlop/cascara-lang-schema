@@ -12,7 +12,6 @@ import io.github.qishr.cascara.common.spi.ContentTypes;
 import io.github.qishr.cascara.lang.json.processor.JsonConverter;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaException;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
 import io.github.qishr.cascara.schema.util.CascaraSchemaUri.Lifecycle;
 
 public class SchemaStore {
@@ -58,7 +57,7 @@ public class SchemaStore {
             throw illegalLifecycle(schemaUri);
         }
 
-        CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
+        SchemaDecompiler decompiler = new SchemaDecompiler();
         StructuredDocument doc = decompiler.decompile(compiled);
 
         // AstConverter<?> converter = new AstConverterFactory().create("application/schema+json");
@@ -80,7 +79,8 @@ public class SchemaStore {
     }
 
     private Path getPath(CascaraSchemaUri schemaUri) throws SchemaException {
-        Path schemaDir = schemasDir.resolve(schemaUri.getModuleName(), schemaUri.getSchemaName());
+        Path moduleDir = schemasDir.resolve(schemaUri.getModuleName());
+        Path schemaDir = moduleDir.resolve(schemaUri.getSchemaName());
 
         Path versionDir;
         if (schemaUri.getLifecycle() == Lifecycle.RESOURCE) {

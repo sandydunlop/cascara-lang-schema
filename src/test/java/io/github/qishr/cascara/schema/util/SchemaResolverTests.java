@@ -17,25 +17,21 @@ import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.Schema;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaDecompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaResolver;
-import io.github.qishr.cascara.schema.internal.CompiledSchema;
 import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
 import io.github.qishr.cascara.schema.structure.LazySchemaNode;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.structure.SchemaNode;
 
 public class SchemaResolverTests {
-    CascaraSchemaResolver resolver;
-    CascaraSchemaCompiler compiler;
-    CascaraSchemaDecompiler decompiler;
+    SchemaResolver resolver;
+    SchemaCompiler compiler;
+    SchemaDecompiler decompiler;
 
     @BeforeEach
     void setup() {
-        resolver = new CascaraSchemaResolver();
-        compiler = new CascaraSchemaCompiler(resolver);
-        decompiler = new CascaraSchemaDecompiler();
+        resolver = new SchemaResolver();
+        compiler = new SchemaCompiler(resolver);
+        decompiler = new SchemaDecompiler();
     }
 
     StructuredDocument createTagDoc() {
@@ -68,8 +64,8 @@ public class SchemaResolverTests {
         StructuredDocument tagDoc = createTagDoc();
         StructuredDocument taskDoc = createTaskDoc();
 
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaResolver resolver = new SchemaResolver();
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         compiler.compile(tagDoc); // This automatically registers it with the resolver
         Schema taskSchema = compiler.compile(taskDoc);
@@ -112,8 +108,8 @@ public class SchemaResolverTests {
 
         JsonParser parser = new JsonParser();
         StructuredDocument doc = parser.parse(json);
-        CascaraSchemaResolver resolver = new CascaraSchemaResolver();
-        SchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaResolver resolver = new SchemaResolver();
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema schema = compiler.compile(doc);
 
         SchemaNode bug = schema.getDefinition("bug");
@@ -151,7 +147,7 @@ public class SchemaResolverTests {
         URI uri = URI.create("cascara://core/schema-service/dynamic/cascara.schema/json");
 
         // 2. Register it as a compiled schema (simulating what the compiler does)
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema compiled = compiler.compile(doc, uri);
         resolver.registerSchema(uri, compiled);
 
@@ -178,7 +174,7 @@ public class SchemaResolverTests {
 
         JsonParser parser = new JsonParser();
         StructuredDocument doc = parser.parse(json);
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         // Compiling the document should populate the Resolver's caches
         Schema compiled = compiler.compile(doc, docUri);
@@ -216,7 +212,7 @@ public class SchemaResolverTests {
         // 3. Parse and Compile
         JsonParser parser = new JsonParser();
         StructuredDocument doc = parser.parse(json);
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema compiled = compiler.compile(doc, docUri);
         resolver.registerSchema(docUri, compiled);
 
@@ -259,7 +255,7 @@ public class SchemaResolverTests {
 
         JsonParser parser = new JsonParser();
         StructuredDocument doc = parser.parse(json);
-        CascaraSchemaCompiler compiler = new CascaraSchemaCompiler(resolver);
+        SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema compiled = compiler.compile(doc, docUri);
         resolver.registerSchema(docUri, compiled);
 
@@ -316,7 +312,7 @@ public class SchemaResolverTests {
         Schema original = compiler.compile(doc, URI.create("cascara://test"));
 
         // 3. DECOMPILE: Move from Compiled Graph back to AST
-        CascaraSchemaDecompiler decompiler = new CascaraSchemaDecompiler();
+        SchemaDecompiler decompiler = new SchemaDecompiler();
         SimpleMapNode decompiledAst = decompiler.decompile(original).getRoot();
 
         // 4. RE-COMPILE: Re-hydrate the AST back into a Compiled Schema

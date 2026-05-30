@@ -7,18 +7,16 @@ import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
 import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaKeyword;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaCompiler;
-import io.github.qishr.cascara.schema.internal.CascaraSchemaGenerator;
 
 public class SchemaBuilder {
-    CascaraSchemaGenerator generator;
+    SchemaGenerator generator;
     SchemaResolver resolver;
     SchemaCompiler compiler;
 
     public SchemaBuilder(SchemaResolver resolver) {
         this.resolver = resolver;
-        compiler = new CascaraSchemaCompiler(resolver);
-        generator = new CascaraSchemaGenerator();
+        compiler = new SchemaCompiler(resolver);
+        generator = new SchemaGenerator();
     }
 
     public void registerTypeAnalyzer(TypeAnalyzer ta) {

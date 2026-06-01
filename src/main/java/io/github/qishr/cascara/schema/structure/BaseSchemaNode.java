@@ -22,16 +22,17 @@ public abstract class BaseSchemaNode implements SchemaNode {
     protected URI originUri;
     protected String ref;
     private AstNode originAst;
+    private String format = "";
+    private String contentMediaType;
+    private String dynamicAnchor;
+    private boolean readOnly = false;
+
+    private final SchemaNode metaSchema;
 
     protected final Map<String, SchemaNode> definitions = new HashMap<>();
     private final List<ValidationRule> rules = new ArrayList<>();
-    private String format = "";
     private final Map<String, String> formatOptions = new HashMap<>();
-    private boolean readOnly = false; // Default to false
     private final java.util.Map<String, Object> extensions = new java.util.HashMap<>();
-    private String contentMediaType;
-    private String dynamicAnchor;
-    private final SchemaNode metaSchema;
 
     private final List<SchemaNode> allOf = new ArrayList<>();
     // TODO:

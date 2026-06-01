@@ -1,32 +1,42 @@
 package io.github.qishr.cascara.schema.util;
 
-import io.github.qishr.cascara.schema.SchemaException;
-import io.github.qishr.cascara.schema.SchemaKeyword;
-import io.github.qishr.cascara.schema.util.SchemaGenerator;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import io.github.qishr.cascara.common.lang.annotation.DataField;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
-import io.github.qishr.cascara.common.lang.simple.*;
-import io.github.qishr.cascara.schema.annotation.SchemaProperty;
+import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
+import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
+import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
+import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
+import io.github.qishr.cascara.common.service.CapabilityQueries;
+import io.github.qishr.cascara.common.service.ServiceProviderLayer;
+import io.github.qishr.cascara.common.service.ServiceProviderMetadata;
+import io.github.qishr.cascara.common.type.TypeDescriptor;
+import io.github.qishr.cascara.schema.SchemaException;
+import io.github.qishr.cascara.schema.SchemaKeyword;
+import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.annotation.ContentMediaType;
 import io.github.qishr.cascara.schema.annotation.SchemaDefinition;
+import io.github.qishr.cascara.schema.annotation.SchemaProperty;
 import io.github.qishr.cascara.schema.constraint.NumberConstraint;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
 import io.github.qishr.cascara.schema.internal.SchemaUtils;
 
-import java.lang.reflect.*;
-import java.net.URI;
-import java.util.*;
-
 public final class SchemaGenerator {
 
-    private static final String ARRAY = "array";
-    private static final String BOOLEAN = "boolean";
-    private static final String INTEGER = "integer";
-    private static final String NUMBER = "number";
-    private static final String OBJECT = "object";
-    private static final String STRING = "string";
+    private static final String OBJECT_PROPERTY_CLASS = "javafx.beans.property.ObjectProperty";
 
     private final Set<Class<?>> processingStack = new HashSet<>();
     private final Map<Class<?>, SimpleMapNode> definitions = new LinkedHashMap<>();
@@ -58,6 +68,7 @@ public final class SchemaGenerator {
         return generate(parentDoc, fragment, clazz, null);
     }
 
+    // TODO: Perhaps fragment should be specified as a SchemaNode or AstNode?
     public SimpleDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
         processingStack.clear();
         definitions.clear();
@@ -65,7 +76,7 @@ public final class SchemaGenerator {
 
         if (parentDoc != null) {
             multiClassDocument = true;
-            String id = parentDoc.getString("id");
+            String id = parentDoc.getString(SchemaKeyword.ID.string());
             if (id != null) {
                 originUri = URI.create(id);
             }
@@ -110,15 +121,11 @@ public final class SchemaGenerator {
             clazz = template.getClass();
         }
         SimpleMapNode root = new SimpleMapNode();
-        // root.put("name", scalar(clazz.getSimpleName()));
         fillObjectMetadata(clazz, root);
-        root.put("type", scalar(OBJECT));
+        root.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.OBJECT.string()));
 
         SimpleMapNode properties = new SimpleMapNode();
-        root.put("properties", properties);
-
-        // // ID key for persistence? TODO: This should not be hard-coded here
-        // properties.put("id", createIdFieldNode());
+        root.put(SchemaKeyword.PROPERTIES.string(), properties);
 
         if (template == null) {
             template = instantiate(clazz);
@@ -132,13 +139,6 @@ public final class SchemaGenerator {
         return root;
     }
 
-    private SimpleMapNode createIdFieldNode() {
-        SimpleMapNode node = new SimpleMapNode();
-        node.put("type", scalar(INTEGER));
-        node.put("readOnly", scalar(true));
-        return node;
-    }
-
     private void fillObjectMetadata(Class<?> clazz, SimpleMapNode root) {
         if (clazz.isAnnotationPresent(SchemaDefinition.class)) {
             SchemaDefinition definition = clazz.getAnnotation(SchemaDefinition.class);
@@ -147,18 +147,23 @@ public final class SchemaGenerator {
                 ? clazz.getSimpleName()
                 : definition.title();
 
-            root.put("title", scalar(title));
+            root.put(SchemaKeyword.TITLE.string(), title);
 
             if (!definition.description().isEmpty()) {
-                root.put("description", scalar(definition.description()));
+                root.put(SchemaKeyword.DESCRIPTION.string(), definition.description());
+            } else {
+                root.put(SchemaKeyword.DESCRIPTION.string(), clazz.getTypeName());
             }
 
             if (clazz.isAnnotationPresent(ContentMediaType.class)) {
                 ContentMediaType mediaType = clazz.getAnnotation(ContentMediaType.class);
-                root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), scalar(mediaType.value()));
+                root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), mediaType.value());
             }
 
             applyTypeAnalysis(clazz, root);
+        } else {
+            root.put(SchemaKeyword.TITLE.string(), clazz.getSimpleName());
+            root.put(SchemaKeyword.DESCRIPTION.string(), clazz.getTypeName());
         }
     }
 
@@ -180,10 +185,10 @@ public final class SchemaGenerator {
     private SimpleMapNode createFieldNode(Field field, Object template) {
         SimpleMapNode node = new SimpleMapNode();
         SchemaProperty sf = field.getAnnotation(SchemaProperty.class);
-        node.put("title", scalar(sf.title()));
+        node.put(SchemaKeyword.TITLE.string(), scalar(sf.title()));
 
         if (!sf.description().isEmpty()) {
-            node.put("description", scalar(sf.description()));
+            node.put(SchemaKeyword.DESCRIPTION.string(), scalar(sf.description()));
         }
 
         if (field.isAnnotationPresent(ContentMediaType.class)) {
@@ -193,51 +198,72 @@ public final class SchemaGenerator {
 
         appendDefaultValue(node, field, template);
 
-        Class<?> type = field.getType();
-        if (field.getGenericType() instanceof ParameterizedType paramaterizedType) {
-            String typeName = paramaterizedType.getRawType().getTypeName();
-            Type[] paramTypes = paramaterizedType.getActualTypeArguments();
-            if (paramTypes.length != 1 || !typeName.equals("javafx.beans.property.ObjectProperty")) {
-                // TODO: If field is not ObjectProperty, continue from applyTypeAnalysis below
-                // return null; // TODO: Throw exception?
-            } else {
-                Type paramType = paramTypes[0];
-                if (paramType instanceof Class clazz) {
-                    type = clazz;
-                }
-            }
-        }
+        Class<?> type = extractFieldType(field);
 
         applyTypeAnalysis(field, node);
-        String analyzedType = node.getString("type");
+        String analyzedType = node.getString(SchemaKeyword.TYPE.string());
 
-        if (isScalarType(type) || (analyzedType != null &&
-            !ARRAY.equals(analyzedType) && !OBJECT.equals(analyzedType))
+        if (isStandardScalarType(type) || (analyzedType != null &&
+            !SchemaType.ARRAY.string().equals(analyzedType) && !SchemaType.OBJECT.string().equals(analyzedType))
         ) {
             fillTypeInfo(node, type, field);
         }
-        else if (isList(field)) {
+        else if (isList(type)) {
             Class<?> elementType = getListElementType(field);
-            node.put("type", scalar(ARRAY));
-            node.put("items", createItemsNode(elementType, field));
-        }
-        else if (isExternalEntityType(type)) {
-            // External entity → external $ref
-            applyExternalRef(node, type, field);
-        }
-        else {
-            // Embedded/value object → internal definition + $ref
-            applyInternalRef(node, type);
+            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.ARRAY.string()));
+            node.put(SchemaKeyword.ITEMS.string(), createItemsNode(elementType, field));
+        } else {
+            // If there is a type descriptor, use it.
+            // If there isn't, then use a $ref
+            ServiceProviderLayer rootLayer = ServiceProviderLayer.getRootLayer();
+            List<ServiceProviderMetadata> typeConverters = rootLayer.getProviders(
+                TypeDescriptor.class,
+                CapabilityQueries.allOf(
+                    CapabilityQueries.hasExactValue("type", type.getName())
+                )
+            );
+
+            if (typeConverters.isEmpty()) {
+                if (isExternalEntityType(type)) {
+                    // External entity -> external $ref
+                    applyExternalRef(node, type, field);
+                }
+                else {
+                    // Embedded/value object -> internal definition + $ref
+                    applyInternalRef(node, type);
+                }
+            } else {
+                TypeDescriptor converter = ServiceProviderLayer.loadProvider(
+                    TypeDescriptor.class,
+                    typeConverters.getFirst()
+                );
+                converter.toSchema(node);
+            }
         }
 
         applyConstraints(node, field);
         return node;
     }
 
+    /// If the field is a JavaFX ObjectProperty, use the raw type, otherwise use the field's declared type
+    private Class<?> extractFieldType(Field field) {
+        if (field.getGenericType() instanceof ParameterizedType paramaterizedType) {
+            String typeName = paramaterizedType.getRawType().getTypeName();
+            Type[] paramTypes = paramaterizedType.getActualTypeArguments();
+            if (paramTypes.length == 1 && typeName.equals(OBJECT_PROPERTY_CLASS)) {
+                Type paramType = paramTypes[0];
+                if (paramType instanceof Class clazz) {
+                    return clazz;
+                }
+            }
+        }
+        return field.getType();
+    }
+
     private SimpleMapNode createItemsNode(Class<?> elementType, Field field) {
         SimpleMapNode items = new SimpleMapNode();
 
-        if (isScalarType(elementType)) {
+        if (isStandardScalarType(elementType)) {
             fillTypeInfo(items, elementType, field);
         } else if (isExternalEntityType(elementType)) {
             applyExternalRef(items, elementType, field);
@@ -255,6 +281,7 @@ public final class SchemaGenerator {
         }
     }
 
+    // TODO: This might not work with ObjectProperty fields
     private void applyTypeAnalysis(Class<?> clazz, SimpleMapNode targetAst) {
         for (TypeAnalyzer ta : typeAnalyzers) {
             ta.analyze(clazz, targetAst);
@@ -264,13 +291,12 @@ public final class SchemaGenerator {
     private void applyExternalRef(SimpleMapNode node, Class<?> target, Field field) {
         CascaraSchemaUri schemaUri = new CascaraSchemaUri(target);
         String schemaUriString = schemaUri.toUri().toString();
-        // node.put("$ref", scalar(SCHEMA_SERVICE_URI + target.getName()));
-        node.put("$ref", scalar(schemaUriString));
+        node.put(SchemaKeyword.REF.string(), scalar(schemaUriString));
     }
 
     private void applyInternalRef(SimpleMapNode node, Class<?> target) {
         ensureDefinition(target);
-        node.put("$ref", scalar(definitionsLocation + "/" + target.getSimpleName()));
+        node.put(SchemaKeyword.REF.string(), scalar(definitionsLocation + "/" + target.getSimpleName()));
     }
 
     private void ensureDefinition(Class<?> clazz) {
@@ -280,14 +306,16 @@ public final class SchemaGenerator {
         processingStack.add(clazz);
         try {
             SimpleMapNode def = new SimpleMapNode();
-            def.put("type", scalar(OBJECT));
+            def.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.OBJECT.string()));
 
             fillObjectMetadata(clazz, def);
 
             SimpleMapNode properties = new SimpleMapNode();
-            def.put("properties", properties);
 
-            properties.put("id", createIdFieldNode());
+            def.put(SchemaKeyword.PROPERTIES.string(), properties);
+
+            // TODO: This probably shoudn't be here
+            // properties.put(SchemaKeyword.ID.string(), createIdFieldNode());
 
             Object template = instantiate(clazz);
             for (Field field : getAllFields(clazz)) {
@@ -302,36 +330,32 @@ public final class SchemaGenerator {
         }
     }
 
+
+
+
+
     private void fillTypeInfo(SimpleMapNode node, Class<?> type, Field field) {
         if (type == boolean.class || type == Boolean.class) {
-            node.put("type", scalar(BOOLEAN));
+            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.BOOLEAN.string()));
         } else if (type == int.class || type == Integer.class
             || type == long.class || type == Long.class) {
-            node.put("type", scalar(INTEGER));
+            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.INTEGER.string()));
         } else if (type == double.class || type == Double.class
             || type == float.class || type == Float.class) {
-            node.put("type", scalar(NUMBER));
+            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.NUMBER.string()));
         } else if (type == String.class || type.isEnum()) {
-            node.put("type", scalar(STRING));
+            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.STRING.string()));
             if (type.isEnum()) {
                 SimpleSequenceNode enumNode = new SimpleSequenceNode();
                 for (Object ec : type.getEnumConstants()) {
                     enumNode.add(scalar(ec.toString()));
                 }
-                node.put("enum", enumNode);
+                node.put(SchemaKeyword.ENUM.string(), enumNode);
             }
-        } else if (type == java.time.LocalDateTime.class
-            || type == java.time.Instant.class) {
-            node.put("type", scalar(STRING));
-            node.put("format", scalar("date-time"));
         }
 
         applyConstraints(node, field);
     }
-
-
-
-
 
     private void applyConstraints(SimpleMapNode node, Field field) {
         if (field.isAnnotationPresent(StringConstraint.class)) {
@@ -378,7 +402,7 @@ public final class SchemaGenerator {
             field.setAccessible(true);
             Object value = field.get(instance);
             if (value != null && !(value instanceof List)) {
-                node.put("default", scalar(value));
+                node.put(SchemaKeyword.DEFAULT.string(), scalar(value));
             }
         } catch (IllegalAccessException ignored) {}
     }
@@ -407,7 +431,7 @@ public final class SchemaGenerator {
         return new SimpleScalarNode(value);
     }
 
-    private boolean isScalarType(Class<?> type) {
+    private boolean isStandardScalarType(Class<?> type) {
         return type.isPrimitive()
             || type == Boolean.class
             || type == Integer.class
@@ -415,13 +439,11 @@ public final class SchemaGenerator {
             || type == Double.class
             || type == Float.class
             || type == String.class
-            || type.isEnum()
-            || type == java.time.LocalDateTime.class
-            || type == java.time.Instant.class;
+            || type.isEnum();
     }
 
-    private boolean isList(Field field) {
-        return List.class.isAssignableFrom(field.getType());
+    private boolean isList(Class<?> type) {
+        return List.class.isAssignableFrom(type);
     }
 
     private Class<?> getListElementType(Field field) {

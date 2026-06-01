@@ -33,16 +33,13 @@ import io.github.qishr.cascara.schema.structure.LazySchemaNode;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.structure.ScalarSchemaNode;
 import io.github.qishr.cascara.schema.structure.SchemaNode;
-import io.github.qishr.cascara.schema.util.DynamicScope;
 import io.github.qishr.cascara.schema.util.SchemaCompiler;
-import io.github.qishr.cascara.schema.util.SchemaResolver;
 
 public class SchemaCompiler {
-    private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema";
+    public static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema";
 
     // TODO: These should be in a TypeAnalyzer
     private static final String ABSOLUTE = "absolute";
-    // private static final String EXTENSIONS = "extensions";
     private static final String NAME = "name";
 
     // Default names for things
@@ -67,7 +64,7 @@ public class SchemaCompiler {
 
     public SchemaCompiler setReporter(Reporter reporter) {
         if (reporter == null) {
-            this.reporter.error("Reporter must not be null");
+            this.reporter.error(null, "Reporter must not be null");
         } else {
             this.reporter = reporter;
         }
@@ -85,20 +82,20 @@ public class SchemaCompiler {
 
     public Schema compile(StructuredDocument doc, URI originUri) {
         if (doc == null) {
-            reporter.error("Document must not be null");
+            reporter.error(null, "Document must not be null");
             return null;
         }
         AstNode root = doc.getRoot();
 
         if (!(root instanceof MapAstNode map)) {
-            reporter.error("Document root must be an AstMapNode");
+            reporter.error(null, "Document root must be an AstMapNode");
             return null;
         }
 
         if (originUri == null) {
             AstNode idNode = map.get(SchemaKeyword.ID.string());
             if (!(idNode instanceof ScalarAstNode scalarId)) {
-                reporter.error("Document must contain $id or origin URI must be given to compiler");
+                reporter.error(null, "Document must contain $id or origin URI must be given to compiler");
                 return null;
             }
             originUri = URI.create(scalarId.getString());
@@ -132,8 +129,8 @@ public class SchemaCompiler {
                 Schema metaDoc = resolver.getSchema(metaUri);
                 metaRoot = metaDoc.getRoot();
             } catch (Exception e) {
-                reporter.warn("Could not resolve meta-schema: " + metaUri);
-                reporter.warn(e.getMessage());
+                reporter.warn(null, "Could not resolve meta-schema: " + metaUri);
+                reporter.warn(null, e.getMessage());
             }
         }
 
@@ -177,12 +174,12 @@ public class SchemaCompiler {
                     try {
                         currentMeta = resolver.getSchema(metaUri).getRoot();
                     } catch (Exception e) {
-                        reporter.warn("Could not resolve local $schema: " + localSchema);
+                        reporter.warn(null, "Could not resolve local $schema: " + localSchema);
                     }
                 }
             } catch (Exception e) {
                 // Fallback to the parent meta if the local one fails to load
-                reporter.warn("Could not resolve local $schema: " + localSchema);
+                reporter.warn(null, "Could not resolve local $schema: " + localSchema);
             }
         }
 

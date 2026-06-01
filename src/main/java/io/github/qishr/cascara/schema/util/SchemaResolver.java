@@ -135,6 +135,7 @@ public class SchemaResolver {
     //
 
     public SchemaNode resolve(String ref, SchemaNode relativeTo, DynamicScope scope) throws SchemaException {
+        // This is public because it's used by LazySchemaNode
         // Set the ThreadLocal so the Compiler can find it during this resolution
         DynamicScope previous = currentScope.get();
         currentScope.set(scope);
@@ -151,7 +152,10 @@ public class SchemaResolver {
         }
     }
 
-    public DynamicScope getCurrentScope() { return currentScope.get(); }
+    public DynamicScope getCurrentScope() {
+        // This is public because it's used by SchemaCompiler
+        return currentScope.get();
+    }
 
     //
     // Private MEthods

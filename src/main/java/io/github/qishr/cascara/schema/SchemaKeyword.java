@@ -70,10 +70,10 @@ public enum SchemaKeyword {
     DESCRIPTION("description", SchemaType.STRING),
     DEFAULT("default", SchemaType.ANY),
     DEPRECATED("deprecated", SchemaType.BOOLEAN),
-    
+
     READ_ONLY("readOnly", SchemaType.BOOLEAN),
 
-    
+
     WRITE_ONLY("writeOnly", SchemaType.BOOLEAN),
     FORMAT("format", SchemaType.STRING),
     CONTENT_MEDIA_TYPE("contentMediaType", SchemaType.STRING),
@@ -93,7 +93,9 @@ public enum SchemaKeyword {
         this.suggestions = suggestions;
     }
 
+    /// Returns the JSON Schema keyword name
     public String string() { return string; }
+
     public SchemaType type() { return type; }
     public List<String> suggestions() { return suggestions; }
     public boolean hasSuggestions() { return !suggestions.isEmpty(); }

@@ -29,24 +29,6 @@ import io.github.qishr.cascara.schema.util.SchemaDecompiler;
 
 public final class SchemaDecompiler {
     private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema";
-    private static final String ARRAY = "array";
-    private static final String OBJECT = "object";
-
-    // Standard JSON Schema Keywords
-    private static final String DEFS = "$defs";
-    private static final String ID = "$id";
-    private static final String REF = "$ref";
-    private static final String SCHEMA = "$schema";
-    private static final String DEFAULT = "default";
-    private static final String DESCRIPTION = "description";
-    private static final String ITEMS = "items";
-    private static final String PROPERTIES = "properties";
-    private static final String READONLY = "readOnly";
-    private static final String TITLE = "title";
-    private static final String TYPE = "type";
-
-    private static final String DYNAMIC_ANCHOR = "$dynamicAnchor";
-    private static final String DYNAMIC_REF = "$dynamicRef";
 
     private URI originUri;
 
@@ -60,13 +42,13 @@ public final class SchemaDecompiler {
         // This handles CEMA vs Vanilla automatically.
         URI metaUri = compiledRoot.getMetaSchema().getOriginUri();
         if (metaUri != null) {
-            root.put(SCHEMA, scalarValue(metaUri.toString()));
+            root.put(SchemaKeyword.SCHEMA.string(), scalarValue(metaUri.toString()));
         } else {
-            root.put(SCHEMA, scalarValue(META_SCHEMA_URI));
+            root.put(SchemaKeyword.SCHEMA.string(), scalarValue(META_SCHEMA_URI));
         }
 
         originUri = compiled.getOriginUri();
-        root.put(ID, scalarValue(originUri));
+        root.put(SchemaKeyword.ID.string(), scalarValue(originUri));
 
         SimpleMapNode decompiled = decompileInternal(compiledRoot);
         for (SimpleMapEntryNode entry : decompiled.getEntries()) {
@@ -106,7 +88,7 @@ public final class SchemaDecompiler {
 
                     SimpleMapNode refMap = new SimpleMapNode();
                     String ref = lazy.getRef();
-                    String refKey = (ref != null && ref.startsWith("#") && !ref.contains("/")) ? DYNAMIC_REF : REF;
+                    String refKey = (ref != null && ref.startsWith("#") && !ref.contains("/")) ? SchemaKeyword.DYNAMIC_REF.string() : SchemaKeyword.REF.string();
                     refMap.put(refKey, scalarValue(ref));
                     yield refMap;
                 }
@@ -133,7 +115,7 @@ public final class SchemaDecompiler {
 
     private SimpleMapNode object(ObjectSchemaNode object) throws SchemaException {
         SimpleMapNode map = new SimpleMapNode();
-        map.put(TYPE, scalarValue(OBJECT));
+        map.put(SchemaKeyword.TYPE.string(), scalarValue(SchemaType.OBJECT.string()));
 
         // definitions
         if (!object.getDefinitions().isEmpty()) {
@@ -141,7 +123,7 @@ public final class SchemaDecompiler {
             for (var e : object.getDefinitions().entrySet()) {
                 definitions.put(e.getKey(), decompileInternal(e.getValue()));
             }
-            map.put(DEFS, definitions);
+            map.put(SchemaKeyword.DEFS.string(), definitions);
         }
 
         // properties
@@ -150,7 +132,7 @@ public final class SchemaDecompiler {
             for (var e : object.getProperties().entrySet()) {
                 properties.put(e.getKey(), decompileInternal(e.getValue()));
             }
-            map.put(PROPERTIES, properties);
+            map.put(SchemaKeyword.PROPERTIES.string(), properties);
         }
 
         if (object.getAdditionalPropertiesSchema() != null) {
@@ -172,22 +154,22 @@ public final class SchemaDecompiler {
     private SimpleMapNode array(ArraySchemaNode array) {
         SimpleMapNode map = new SimpleMapNode();
         SimpleMapNode items = new SimpleMapNode();
-        map.put(TYPE, scalarValue(ARRAY));
+        map.put(SchemaKeyword.TYPE.string(), scalarValue(SchemaType.ARRAY.string()));
 
         SchemaNode template = array.getItemSchema();
         if (template instanceof LazySchemaNode lazy) {
             if (lazy.getRef() == null || lazy.getRef().isEmpty()) {
                 throw new SchemaException("Missing $ref: ", array.getOriginUri().toString(), originUri);
             }
-            items.put(REF, scalarValue(lazy.getRef()));
+            items.put(SchemaKeyword.REF.string(), scalarValue(lazy.getRef()));
         }
         else {
-            items.put(TYPE, scalarValue(template.getType().toString().toLowerCase()));
+            items.put(SchemaKeyword.TYPE.string(), scalarValue(template.getType().toString().toLowerCase()));
         }
 
         if (template != null) {
             // Recurse so nested structures in arrays are fully decompiled
-            map.put(ITEMS, decompileInternal(template));
+            map.put(SchemaKeyword.ITEMS.string(), decompileInternal(template));
         }
 
         return map;
@@ -197,7 +179,7 @@ public final class SchemaDecompiler {
         SimpleMapNode map = new SimpleMapNode();
         String type = node.getType().toString().toLowerCase();
         if (type != null && node.getType() != SchemaType.ANY) {
-            map.put(TYPE, scalarValue(type));
+            map.put(SchemaKeyword.TYPE.string(), scalarValue(type));
         }
         return map;
     }
@@ -212,21 +194,23 @@ public final class SchemaDecompiler {
 
     private Map<String, Object> standardKeywords(SchemaNode compiled) {
         Map<String, Object> map = new HashMap<>();
-
-        if (compiled.getTitle() != null && !compiled.getTitle().isEmpty()) {
-            map.put(TITLE, compiled.getTitle());
+        if (compiled.getDefaultValue() != null) {
+            map.put(SchemaKeyword.DEFAULT.string(), compiled.getDefaultValue());
         }
         if (compiled.getDescription() != null && !compiled.getDescription().isEmpty()) {
-            map.put(DESCRIPTION, compiled.getDescription());
-        }
-        if (compiled.isReadOnly()) {
-            map.put(READONLY, true);
-        }
-        if (compiled.getDefaultValue() != null) {
-            map.put(DEFAULT, compiled.getDefaultValue());
+            map.put(SchemaKeyword.DESCRIPTION.string(), compiled.getDescription());
         }
         if (compiled.getDynamicAnchor() != null && !compiled.getDynamicAnchor().isEmpty()) {
-            map.put(DYNAMIC_ANCHOR, compiled.getDynamicAnchor());
+            map.put(SchemaKeyword.DYNAMIC_ANCHOR.string(), compiled.getDynamicAnchor());
+        }
+        if (compiled.getFormat() != null && !compiled.getFormat().isEmpty()) {
+            map.put(SchemaKeyword.FORMAT.string(), compiled.getFormat());
+        }
+        if (compiled.isReadOnly()) {
+            map.put(SchemaKeyword.READ_ONLY.string(), true);
+        }
+        if (compiled.getTitle() != null && !compiled.getTitle().isEmpty()) {
+            map.put(SchemaKeyword.TITLE.string(), compiled.getTitle());
         }
         return map;
     }

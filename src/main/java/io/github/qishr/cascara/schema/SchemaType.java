@@ -12,7 +12,7 @@ public enum SchemaType {
     }
 
     /// Return the JSON Schema type name
-    public String string() {
+    public String asString() {
         return toString().toLowerCase();
     }
 }

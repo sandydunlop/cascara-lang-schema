@@ -5,10 +5,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import io.github.qishr.cascara.common.util.ContentType;
 import io.github.qishr.cascara.common.content.ResourceContent;
 import io.github.qishr.cascara.common.lang.StructuredDocument;
-import io.github.qishr.cascara.common.spi.ContentTypes;
+import io.github.qishr.cascara.common.util.ContentTypes;
+import io.github.qishr.cascara.common.util.ContentType;
 import io.github.qishr.cascara.lang.json.processor.JsonConverter;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaException;
@@ -59,9 +59,6 @@ public class SchemaStore {
 
         SchemaDecompiler decompiler = new SchemaDecompiler();
         StructuredDocument doc = decompiler.decompile(compiled);
-
-        // AstConverter<?> converter = new AstConverterFactory().create("application/schema+json");
-        // String schemaString = converter.toText(doc.getRoot());
 
         String schemaString = new JsonConverter().toText(doc.getRoot());
 

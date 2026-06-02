@@ -26,7 +26,7 @@ public class UniqueItemsRule implements ValidationRule {
         for (int i = 0; i < sequence.getChildren().size(); i++) {
             AstNode item = sequence.getChildren().get(i);
             if (item instanceof ScalarAstNode scalar) {
-                Object val = scalar.getPrimitiveValue();
+                Object val = scalar.getPrimitive();
                 if (!seen.add(val)) {
                     String msg = String.format("Duplicate item found: '%s'. Array must have unique items.", val);
                     result.addError(path + "[" + i + "]", msg, item.getStartLine(), item.getStartColumn());

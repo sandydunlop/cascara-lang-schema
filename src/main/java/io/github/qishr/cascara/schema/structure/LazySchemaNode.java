@@ -81,7 +81,6 @@ public class LazySchemaNode extends BaseSchemaNode {
                                node.getStartLine(), node.getStartColumn());
             }
         } catch (Exception e) {
-            // Using your specific addError signature
             result.addError(path, "Broken schema reference: " + ref + " (" + e.getMessage() + ")",
                            node.getStartLine(), node.getStartColumn());
         }

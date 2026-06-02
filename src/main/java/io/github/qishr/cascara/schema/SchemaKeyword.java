@@ -94,7 +94,7 @@ public enum SchemaKeyword {
     }
 
     /// Returns the JSON Schema keyword name
-    public String string() { return string; }
+    public String asString() { return string; }
 
     public SchemaType type() { return type; }
     public List<String> suggestions() { return suggestions; }

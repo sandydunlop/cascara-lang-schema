@@ -20,10 +20,11 @@ import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
+import io.github.qishr.cascara.common.lang.factory.ParserFactory;
 import io.github.qishr.cascara.common.lang.processor.Parser;
-import io.github.qishr.cascara.common.spi.ParserFactory;
-import io.github.qishr.cascara.common.spi.ServiceException;
+import io.github.qishr.cascara.common.service.ServiceException;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
+
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
@@ -224,7 +225,7 @@ public class SchemaResolver {
         if (node == null) return null;
 
         // Check for $dynamicAnchor (using the extension map we set in the compiler)
-        Object dynamicAnchor = node.getExtension(SchemaKeyword.DYNAMIC_ANCHOR.string());
+        Object dynamicAnchor = node.getExtension(SchemaKeyword.DYNAMIC_ANCHOR.asString());
         if (dynamicAnchor instanceof String anchorName) {
             // Register this node's URI for this anchor name in the current resolution path
             scope.addAnchor(anchorName, node.getOriginUri());
@@ -328,10 +329,10 @@ public class SchemaResolver {
     private AstNode findNodeByAnchor(AstNode root, String anchor) {
         if (root instanceof MapAstNode map) {
             // 1. Check if this specific node is the target
-            String id = map.getString(SchemaKeyword.ID.string());
-            String nodeAnchor = map.getString(SchemaKeyword.ANCHOR.string());
+            String id = map.getString(SchemaKeyword.ID.asString());
+            String nodeAnchor = map.getString(SchemaKeyword.ANCHOR.asString());
 
-            String dynAnchor = map.getString(SchemaKeyword.DYNAMIC_ANCHOR.string());
+            String dynAnchor = map.getString(SchemaKeyword.DYNAMIC_ANCHOR.asString());
 
             if (anchor.equals(id) || anchor.equals(nodeAnchor) || anchor.equals(dynAnchor)) {
                 return map;

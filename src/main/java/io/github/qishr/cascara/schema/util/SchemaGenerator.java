@@ -44,7 +44,7 @@ public final class SchemaGenerator {
 
     private boolean multiClassDocument = false;
     private SimpleMapNode definitionsContainer;
-    private String definitionsLocation = "#/" + SchemaKeyword.DEFS.string();
+    private String definitionsLocation = "#/" + SchemaKeyword.DEFS.asString();
 
     private URI originUri;
 
@@ -76,7 +76,7 @@ public final class SchemaGenerator {
 
         if (parentDoc != null) {
             multiClassDocument = true;
-            String id = parentDoc.getString(SchemaKeyword.ID.string());
+            String id = parentDoc.getString(SchemaKeyword.ID.asString());
             if (id != null) {
                 originUri = URI.create(id);
             }
@@ -110,7 +110,7 @@ public final class SchemaGenerator {
                     String defName = e.getKey().getSimpleName();
                     defsNode.put(defName, e.getValue());
                 }
-                classRoot.put(SchemaKeyword.DEFS.string(), defsNode);
+                classRoot.put(SchemaKeyword.DEFS.asString(), defsNode);
             }
         }
         return new SimpleDocument(classRoot);
@@ -122,10 +122,10 @@ public final class SchemaGenerator {
         }
         SimpleMapNode root = new SimpleMapNode();
         fillObjectMetadata(clazz, root);
-        root.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.OBJECT.string()));
+        root.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.OBJECT.asString()));
 
         SimpleMapNode properties = new SimpleMapNode();
-        root.put(SchemaKeyword.PROPERTIES.string(), properties);
+        root.put(SchemaKeyword.PROPERTIES.asString(), properties);
 
         if (template == null) {
             template = instantiate(clazz);
@@ -147,23 +147,23 @@ public final class SchemaGenerator {
                 ? clazz.getSimpleName()
                 : definition.title();
 
-            root.put(SchemaKeyword.TITLE.string(), title);
+            root.put(SchemaKeyword.TITLE.asString(), title);
 
             if (!definition.description().isEmpty()) {
-                root.put(SchemaKeyword.DESCRIPTION.string(), definition.description());
+                root.put(SchemaKeyword.DESCRIPTION.asString(), definition.description());
             } else {
-                root.put(SchemaKeyword.DESCRIPTION.string(), clazz.getTypeName());
+                root.put(SchemaKeyword.DESCRIPTION.asString(), clazz.getTypeName());
             }
 
             if (clazz.isAnnotationPresent(ContentMediaType.class)) {
                 ContentMediaType mediaType = clazz.getAnnotation(ContentMediaType.class);
-                root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), mediaType.value());
+                root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.asString(), mediaType.value());
             }
 
             applyTypeAnalysis(clazz, root);
         } else {
-            root.put(SchemaKeyword.TITLE.string(), clazz.getSimpleName());
-            root.put(SchemaKeyword.DESCRIPTION.string(), clazz.getTypeName());
+            root.put(SchemaKeyword.TITLE.asString(), clazz.getSimpleName());
+            root.put(SchemaKeyword.DESCRIPTION.asString(), clazz.getTypeName());
         }
     }
 
@@ -185,15 +185,15 @@ public final class SchemaGenerator {
     private SimpleMapNode createFieldNode(Field field, Object template) {
         SimpleMapNode node = new SimpleMapNode();
         SchemaProperty sf = field.getAnnotation(SchemaProperty.class);
-        node.put(SchemaKeyword.TITLE.string(), scalar(sf.title()));
+        node.put(SchemaKeyword.TITLE.asString(), scalar(sf.title()));
 
         if (!sf.description().isEmpty()) {
-            node.put(SchemaKeyword.DESCRIPTION.string(), scalar(sf.description()));
+            node.put(SchemaKeyword.DESCRIPTION.asString(), scalar(sf.description()));
         }
 
         if (field.isAnnotationPresent(ContentMediaType.class)) {
             ContentMediaType mediaType = field.getAnnotation(ContentMediaType.class);
-            node.put(SchemaKeyword.CONTENT_MEDIA_TYPE.string(), scalar(mediaType.value()));
+            node.put(SchemaKeyword.CONTENT_MEDIA_TYPE.asString(), scalar(mediaType.value()));
         }
 
         appendDefaultValue(node, field, template);
@@ -201,17 +201,17 @@ public final class SchemaGenerator {
         Class<?> type = extractFieldType(field);
 
         applyTypeAnalysis(field, node);
-        String analyzedType = node.getString(SchemaKeyword.TYPE.string());
+        String analyzedType = node.getString(SchemaKeyword.TYPE.asString());
 
         if (isStandardScalarType(type) || (analyzedType != null &&
-            !SchemaType.ARRAY.string().equals(analyzedType) && !SchemaType.OBJECT.string().equals(analyzedType))
+            !SchemaType.ARRAY.asString().equals(analyzedType) && !SchemaType.OBJECT.asString().equals(analyzedType))
         ) {
             fillTypeInfo(node, type, field);
         }
         else if (isList(type)) {
             Class<?> elementType = getListElementType(field);
-            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.ARRAY.string()));
-            node.put(SchemaKeyword.ITEMS.string(), createItemsNode(elementType, field));
+            node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.ARRAY.asString()));
+            node.put(SchemaKeyword.ITEMS.asString(), createItemsNode(elementType, field));
         } else {
             // If there is a type descriptor, use it.
             // If there isn't, then use a $ref
@@ -291,12 +291,12 @@ public final class SchemaGenerator {
     private void applyExternalRef(SimpleMapNode node, Class<?> target, Field field) {
         CascaraSchemaUri schemaUri = new CascaraSchemaUri(target);
         String schemaUriString = schemaUri.toUri().toString();
-        node.put(SchemaKeyword.REF.string(), scalar(schemaUriString));
+        node.put(SchemaKeyword.REF.asString(), scalar(schemaUriString));
     }
 
     private void applyInternalRef(SimpleMapNode node, Class<?> target) {
         ensureDefinition(target);
-        node.put(SchemaKeyword.REF.string(), scalar(definitionsLocation + "/" + target.getSimpleName()));
+        node.put(SchemaKeyword.REF.asString(), scalar(definitionsLocation + "/" + target.getSimpleName()));
     }
 
     private void ensureDefinition(Class<?> clazz) {
@@ -306,13 +306,13 @@ public final class SchemaGenerator {
         processingStack.add(clazz);
         try {
             SimpleMapNode def = new SimpleMapNode();
-            def.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.OBJECT.string()));
+            def.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.OBJECT.asString()));
 
             fillObjectMetadata(clazz, def);
 
             SimpleMapNode properties = new SimpleMapNode();
 
-            def.put(SchemaKeyword.PROPERTIES.string(), properties);
+            def.put(SchemaKeyword.PROPERTIES.asString(), properties);
 
             // TODO: This probably shoudn't be here
             // properties.put(SchemaKeyword.ID.string(), createIdFieldNode());
@@ -336,21 +336,21 @@ public final class SchemaGenerator {
 
     private void fillTypeInfo(SimpleMapNode node, Class<?> type, Field field) {
         if (type == boolean.class || type == Boolean.class) {
-            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.BOOLEAN.string()));
+            node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.BOOLEAN.asString()));
         } else if (type == int.class || type == Integer.class
             || type == long.class || type == Long.class) {
-            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.INTEGER.string()));
+            node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.INTEGER.asString()));
         } else if (type == double.class || type == Double.class
             || type == float.class || type == Float.class) {
-            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.NUMBER.string()));
+            node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.NUMBER.asString()));
         } else if (type == String.class || type.isEnum()) {
-            node.put(SchemaKeyword.TYPE.string(), scalar(SchemaType.STRING.string()));
+            node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.STRING.asString()));
             if (type.isEnum()) {
                 SimpleSequenceNode enumNode = new SimpleSequenceNode();
                 for (Object ec : type.getEnumConstants()) {
                     enumNode.add(scalar(ec.toString()));
                 }
-                node.put(SchemaKeyword.ENUM.string(), enumNode);
+                node.put(SchemaKeyword.ENUM.asString(), enumNode);
             }
         }
 
@@ -366,28 +366,28 @@ public final class SchemaGenerator {
                 for (String opt : constraint.options()) {
                     enumNode.add(scalar(opt));
                 }
-                node.put(SchemaKeyword.ENUM.string(), enumNode);
+                node.put(SchemaKeyword.ENUM.asString(), enumNode);
             }
             if (constraint.minLength() > -1) {
-                node.put(SchemaKeyword.MIN_LENGTH.string(), scalar(constraint.minLength()));
+                node.put(SchemaKeyword.MIN_LENGTH.asString(), scalar(constraint.minLength()));
             }
             if (constraint.maxLength() > -1) {
-                node.put(SchemaKeyword.MAX_LENGTH.string(), scalar(constraint.maxLength()));
+                node.put(SchemaKeyword.MAX_LENGTH.asString(), scalar(constraint.maxLength()));
             }
             // TODO: pattern, regex rule
         }
 
         if (field.isAnnotationPresent(ReadOnly.class)) {
-            node.put(SchemaKeyword.READ_ONLY.string(), scalar(true));
+            node.put(SchemaKeyword.READ_ONLY.asString(), scalar(true));
         }
 
         if (field.isAnnotationPresent(NumberConstraint.class)) {
             NumberConstraint constraint = field.getAnnotation(NumberConstraint.class);
             if (constraint.min() != Double.NEGATIVE_INFINITY) {
-                node.put(SchemaKeyword.MINIMUM.string(), scalar(constraint.min()));
+                node.put(SchemaKeyword.MINIMUM.asString(), scalar(constraint.min()));
             }
             if (constraint.max() != Double.POSITIVE_INFINITY) {
-                node.put(SchemaKeyword.MAXIMUM.string(), scalar(constraint.max()));
+                node.put(SchemaKeyword.MAXIMUM.asString(), scalar(constraint.max()));
             }
         }
     }
@@ -402,7 +402,7 @@ public final class SchemaGenerator {
             field.setAccessible(true);
             Object value = field.get(instance);
             if (value != null && !(value instanceof List)) {
-                node.put(SchemaKeyword.DEFAULT.string(), scalar(value));
+                node.put(SchemaKeyword.DEFAULT.asString(), scalar(value));
             }
         } catch (IllegalAccessException ignored) {}
     }

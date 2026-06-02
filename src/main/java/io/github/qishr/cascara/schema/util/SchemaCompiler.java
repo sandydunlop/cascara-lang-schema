@@ -93,12 +93,12 @@ public class SchemaCompiler {
         }
 
         if (originUri == null) {
-            AstNode idNode = map.get(SchemaKeyword.ID.string());
+            AstNode idNode = map.get(SchemaKeyword.ID.asString());
             if (!(idNode instanceof ScalarAstNode scalarId)) {
                 reporter.error(null, "Document must contain $id or origin URI must be given to compiler");
                 return null;
             }
-            originUri = URI.create(scalarId.getString());
+            originUri = URI.create(scalarId.asString());
         }
 
         String name = map.getString(NAME);
@@ -118,7 +118,7 @@ public class SchemaCompiler {
         // RESOLVE THE META-SCHEMA
         // Look for $schema in the root map. If not found, use a default from the resolver.
         URI metaUri = URI.create(META_SCHEMA_URI);
-        String schemaRef = map.getString(SchemaKeyword.SCHEMA.string());
+        String schemaRef = map.getString(SchemaKeyword.SCHEMA.asString());
         if (schemaRef != null) {
             metaUri = originUri.resolve(schemaRef);
         }
@@ -147,22 +147,22 @@ public class SchemaCompiler {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private SchemaNode processNode(MapAstNode astNode, String name, URI originUri, URI logicalBaseUri, SchemaNode rootSchema, SchemaNode meta) {
         // 1. Calculate Logical Base ($id) and handle $anchor
-        String idValue = astNode.getString(SchemaKeyword.ID.string());
+        String idValue = astNode.getString(SchemaKeyword.ID.asString());
         URI currentBase = (idValue != null && !idValue.isEmpty())
                 ? logicalBaseUri.resolve(idValue)
                 : logicalBaseUri;
 
-        String anchor = astNode.getString(SchemaKeyword.ANCHOR.string());
-        String refValue = astNode.getString(SchemaKeyword.REF.string());
-        String dynamicAnchor = astNode.getString(SchemaKeyword.DYNAMIC_ANCHOR.string());
+        String anchor = astNode.getString(SchemaKeyword.ANCHOR.asString());
+        String refValue = astNode.getString(SchemaKeyword.REF.asString());
+        String dynamicAnchor = astNode.getString(SchemaKeyword.DYNAMIC_ANCHOR.asString());
 
         if (refValue == null || refValue.isEmpty()) {
-            refValue = astNode.getString(SchemaKeyword.DYNAMIC_REF.string());
+            refValue = astNode.getString(SchemaKeyword.DYNAMIC_REF.asString());
         }
 
         // 1. Check for a local Meta-Schema override ($schema)
         SchemaNode currentMeta = meta;
-        String localSchema = astNode.getString(SchemaKeyword.SCHEMA.string());
+        String localSchema = astNode.getString(SchemaKeyword.SCHEMA.asString());
         if (localSchema != null) {
             try {
                 // Resolve the new meta-schema URI relative to the current base
@@ -213,16 +213,16 @@ public class SchemaCompiler {
         // --- Metadata ---
         schemaNode.setOriginAst(astNode);
         schemaNode.setOriginUri(originUri);
-        schemaNode.setTitle(astNode.getString(SchemaKeyword.TITLE.string()));
-        schemaNode.setDescription(astNode.getString(SchemaKeyword.DESCRIPTION.string()));
-        schemaNode.setContentMediaType(astNode.getString(SchemaKeyword.CONTENT_MEDIA_TYPE.string()));
+        schemaNode.setTitle(astNode.getString(SchemaKeyword.TITLE.asString()));
+        schemaNode.setDescription(astNode.getString(SchemaKeyword.DESCRIPTION.asString()));
+        schemaNode.setContentMediaType(astNode.getString(SchemaKeyword.CONTENT_MEDIA_TYPE.asString()));
 
         SchemaNode effectiveRoot = (rootSchema == null) ? schemaNode : rootSchema;
 
         if (schemaNode instanceof ObjectSchemaNode objNode) {
-            AstNode addProps = astNode.get(SchemaKeyword.ADDITIONAL_PROPERTIES.string());
+            AstNode addProps = astNode.get(SchemaKeyword.ADDITIONAL_PROPERTIES.asString());
             if (addProps instanceof ScalarAstNode scalar) {
-                if (scalar.getPrimitiveValue() instanceof Boolean b) {
+                if (scalar.getPrimitive() instanceof Boolean b) {
                     objNode.setAdditionalPropertiesAllowed(b);
                 }
             } else if (addProps instanceof MapAstNode mapAddProps) {
@@ -232,9 +232,9 @@ public class SchemaCompiler {
                 );
             }
 
-            AstNode unevProps = astNode.get(SchemaKeyword.UNEVALUATED_PROPERTIES.string());
+            AstNode unevProps = astNode.get(SchemaKeyword.UNEVALUATED_PROPERTIES.asString());
             if (unevProps instanceof ScalarAstNode scalar) {
-                if (scalar.getPrimitiveValue() instanceof Boolean b) {
+                if (scalar.getPrimitive() instanceof Boolean b) {
                     objNode.setUnevaluatedPropertiesAllowed(b);
                 }
             } else if (unevProps instanceof MapAstNode mapUnevProps) {
@@ -245,33 +245,33 @@ public class SchemaCompiler {
             }
 
             // Properties recursion
-            if (astNode.get(SchemaKeyword.PROPERTIES.string()) instanceof MapAstNode props) {
+            if (astNode.get(SchemaKeyword.PROPERTIES.asString()) instanceof MapAstNode props) {
                 props.getEntries().forEach((entry) -> {
                     if (entry instanceof MapEntryAstNode entryNode &&
                             entryNode.getKey() instanceof ScalarAstNode scalar &&
                             entryNode.getValue() instanceof MapAstNode m) {
-                        String propName = scalar.getString();
+                        String propName = scalar.asString();
                         objNode.addProperty(propName, processNode(m, propName, originUri, currentBase, effectiveRoot, meta));
                     }
                 });
             }
         }
         else if (schemaNode instanceof ArraySchemaNode arrNode) {
-            AstNode itemsAst = astNode.get(SchemaKeyword.ITEMS.string());
+            AstNode itemsAst = astNode.get(SchemaKeyword.ITEMS.asString());
             if (itemsAst instanceof MapAstNode itemsMap) {
                 arrNode.setItemTemplate(processNode(itemsMap, ITEM, originUri, currentBase, effectiveRoot, meta));
             }
         }
 
         // --- Definitions Recursion ---
-        AstNode defsNode = astNode.get(SchemaKeyword.DEFINITIONS.string());
-        if (defsNode == null) defsNode = astNode.get(SchemaKeyword.DEFS.string());
+        AstNode defsNode = astNode.get(SchemaKeyword.DEFINITIONS.asString());
+        if (defsNode == null) defsNode = astNode.get(SchemaKeyword.DEFS.asString());
         if (defsNode instanceof MapAstNode defs) {
             defs.getEntries().forEach((entry) -> {
                 if (entry instanceof MapEntryAstNode entryNode &&
                         entryNode.getValue() instanceof MapAstNode m &&
                         entryNode.getKey() instanceof ScalarAstNode scalar) {
-                    String key = scalar.getString();
+                    String key = scalar.asString();
                     SchemaNode defNode = processNode(m, key, originUri, currentBase, effectiveRoot, meta);
                     if (effectiveRoot instanceof ObjectSchemaNode objRoot) {
                         objRoot.addDefinition(key, defNode);
@@ -293,10 +293,10 @@ public class SchemaCompiler {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void processComposition( MapAstNode astNode, SchemaKeyword key, BaseSchemaNode parent, URI uri, SchemaNode root, SchemaNode meta) {
-        if (astNode.get(key.string()) instanceof SequenceAstNode seq) {
+        if (astNode.get(key.asString()) instanceof SequenceAstNode seq) {
             seq.getElements().forEach(element -> {
                 if (element instanceof MapAstNode m) {
-                    SchemaNode subSchema = processNode(m, key.string() + "-item", uri, uri, root, meta);
+                    SchemaNode subSchema = processNode(m, key.asString() + "-item", uri, uri, root, meta);
 
                     // ATTACH IT to the parent
                     if (key == SchemaKeyword.ALL_OF) {
@@ -362,13 +362,13 @@ public class SchemaCompiler {
             if (entry instanceof MapEntryAstNode node) {
                 AstNode keyBase = node.getKey();
                 if (keyBase instanceof ScalarAstNode keyNode) {
-                    String key = keyNode.getString();
+                    String key = keyNode.asString();
                     if (!SchemaKeyword.exists(key)) { // it's not a standard JSONSchema keyword
                         AstNode valBase = node.getValue();
 
                         if (valBase instanceof ScalarAstNode valNode) {
                             // Handle simple extensions (x-tracked: true)
-                            schemaNode.setExtension(key, valNode.getPrimitiveValue());
+                            schemaNode.setExtension(key, valNode.getPrimitive());
                         } else if (valBase instanceof MapAstNode mapNode) {
                             // Handle object extensions (x-indexed: { name: "...", unique: true })
                             schemaNode.setExtension(key, convertToMap(mapNode));
@@ -390,11 +390,11 @@ public class SchemaCompiler {
             if (entry instanceof MapEntryAstNode node && node.getKey() instanceof ScalarAstNode kn) {
                 AstNode vn = node.getValue();
                 if (vn instanceof ScalarAstNode scalar) {
-                    result.put(kn.getString(), scalar.getPrimitiveValue());
+                    result.put(kn.asString(), scalar.getPrimitive());
                 } else if (vn instanceof MapAstNode nestedMap) {
-                    result.put(kn.getString(), convertToMap(nestedMap));
+                    result.put(kn.asString(), convertToMap(nestedMap));
                 } else if (vn instanceof SequenceAstNode nestedSeq) {
-                    result.put(kn.getString(), convertToList(nestedSeq));
+                    result.put(kn.asString(), convertToList(nestedSeq));
                 }
             }
         });
@@ -405,7 +405,7 @@ public class SchemaCompiler {
         List<Object> result = new ArrayList<>();
         seqNode.getElements().forEach(element -> {
             if (element instanceof ScalarAstNode scalar) {
-                result.add(scalar.getPrimitiveValue());
+                result.add(scalar.getPrimitive());
             } else if (element instanceof MapAstNode nestedMap) {
                 result.add(convertToMap(nestedMap));
             } else if (element instanceof SequenceAstNode nestedSeq) {
@@ -418,17 +418,17 @@ public class SchemaCompiler {
     @SuppressWarnings("unchecked")
     private void attachRules(@SuppressWarnings("rawtypes") MapAstNode astNode, BaseSchemaNode schemaNode) {
 
-        AstNode defaultVal = astNode.get(SchemaKeyword.DEFAULT.string());
+        AstNode defaultVal = astNode.get(SchemaKeyword.DEFAULT.asString());
         if (defaultVal instanceof ScalarAstNode scalar) {
-            schemaNode.setDefaultValue(scalar.getPrimitiveValue());
+            schemaNode.setDefaultValue(scalar.getPrimitive());
         }
 
-        if (astNode.get(SchemaKeyword.READ_ONLY.string()) instanceof ScalarAstNode scalar &&
-            scalar.getPrimitiveValue() instanceof Boolean b) {
+        if (astNode.get(SchemaKeyword.READ_ONLY.asString()) instanceof ScalarAstNode scalar &&
+            scalar.getPrimitive() instanceof Boolean b) {
             schemaNode.setReadOnly(b);
         }
 
-        String format = astNode.getString(SchemaKeyword.FORMAT.string());
+        String format = astNode.getString(SchemaKeyword.FORMAT.asString());
         if (format != null && !format.isEmpty()) {
             schemaNode.setFormat(format);
         }
@@ -444,49 +444,49 @@ public class SchemaCompiler {
         }
 
         // EnumRule
-        if (astNode.get(SchemaKeyword.ENUM.string()) instanceof SequenceAstNode enumNode) {
+        if (astNode.get(SchemaKeyword.ENUM.asString()) instanceof SequenceAstNode enumNode) {
             @SuppressWarnings("rawtypes")
             List<String> options = enumNode.getElements().stream()
                 .filter(n -> n instanceof ScalarAstNode)
-                .map(n -> ((ScalarAstNode) n).getString())
+                .map(n -> ((ScalarAstNode) n).asString())
                 .toList();
             schemaNode.addRule(new EnumRule(options));
         }
 
         // MinValueRule / MaxValueRule
-        double min = astNode.getDouble(SchemaKeyword.MINIMUM.string(), -1);
+        double min = astNode.getDouble(SchemaKeyword.MINIMUM.asString(), -1);
         if (min != -1) schemaNode.addRule(new MinValueRule(min));
 
-        double max = astNode.getDouble(SchemaKeyword.MAXIMUM.string(), -1);
+        double max = astNode.getDouble(SchemaKeyword.MAXIMUM.asString(), -1);
         if (max != -1) schemaNode.addRule(new MaxValueRule(max));
 
         // MinItemsRule / MaxItemsRule
-        int minItems = astNode.getInteger(SchemaKeyword.MIN_ITEMS.string(), -1);
+        int minItems = astNode.getInteger(SchemaKeyword.MIN_ITEMS.asString(), -1);
         if (minItems != -1) schemaNode.addRule(new MinItemsRule(minItems));
 
-        int maxItems = astNode.getInteger(SchemaKeyword.MAX_ITEMS.string(), -1);
+        int maxItems = astNode.getInteger(SchemaKeyword.MAX_ITEMS.asString(), -1);
         if (maxItems != -1) schemaNode.addRule(new MaxItemsRule(maxItems));
 
         // MinLengthRule / MaxLengthRule
-        int minLength = astNode.getInteger(SchemaKeyword.MIN_LENGTH.string(), -1);
+        int minLength = astNode.getInteger(SchemaKeyword.MIN_LENGTH.asString(), -1);
         if (minLength != -1) schemaNode.addRule(new MinLengthRule(minLength));
 
-        int maxLength = astNode.getInteger(SchemaKeyword.MAX_LENGTH.string(), -1);
+        int maxLength = astNode.getInteger(SchemaKeyword.MAX_LENGTH.asString(), -1);
         if (maxLength != -1) schemaNode.addRule(new MaxLengthRule(maxLength));
 
         // RequiredRule (usually handled at the object level in JSON schema)
-        if (astNode.get(SchemaKeyword.REQUIRED.string()) instanceof SequenceAstNode reqNode) {
+        if (astNode.get(SchemaKeyword.REQUIRED.asString()) instanceof SequenceAstNode reqNode) {
              @SuppressWarnings("rawtypes")
              List<String> requiredFields = reqNode.getElements().stream()
                 .filter(n -> n instanceof ScalarAstNode)
-                .map(n -> ((ScalarAstNode) n).getString())
+                .map(n -> ((ScalarAstNode) n).asString())
                 .toList();
              schemaNode.addRule(new RequiredRule(requiredFields));
         }
     }
 
     private static SchemaType extractType(@SuppressWarnings("rawtypes") MapAstNode node) {
-        String typeStr = node.getString(SchemaKeyword.TYPE.string());
+        String typeStr = node.getString(SchemaKeyword.TYPE.asString());
         if (typeStr != null && !typeStr.isEmpty()) {
             try {
                 return SchemaType.valueOf(typeStr.toUpperCase());

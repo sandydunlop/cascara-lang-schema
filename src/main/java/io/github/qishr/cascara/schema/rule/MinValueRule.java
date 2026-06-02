@@ -14,7 +14,7 @@ public class MinValueRule implements ValidationRule {
     @Override
     public void validate(AstNode node, String path, ValidationResult result) {
         if (node instanceof ScalarAstNode scalar) {
-            validateValue(scalar.getPrimitiveValue(), path, result, node.getStartLine(), node.getStartColumn());
+            validateValue(scalar.getPrimitive(), path, result, node.getStartLine(), node.getStartColumn());
         }
     }
 

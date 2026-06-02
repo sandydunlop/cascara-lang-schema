@@ -34,7 +34,6 @@ public class CompilerTests {
 
         ObjectSchemaNode taskNode = (ObjectSchemaNode) schema.getDefinition("task");
 
-        // This is likely where your current failure is:
         assertNotNull(taskNode.getExtension("x-parent"), "Compiler dropped 'parent' keyword!");
         ObjectSchemaNode item = (ObjectSchemaNode)schema.getDefinition("item");
         SchemaNode statusNode = item.getProperty("status");

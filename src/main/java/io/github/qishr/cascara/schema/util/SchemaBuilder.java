@@ -29,13 +29,13 @@ public class SchemaBuilder {
         SimpleMapNode syntheticRoot = new SimpleMapNode();
         SimpleMapNode definitions = new SimpleMapNode();
 
-        syntheticRoot.put(SchemaKeyword.DEFS.string(), definitions);
-        syntheticRoot.put(SchemaKeyword.ID.string(), new SimpleScalarNode(originUri));
+        syntheticRoot.put(SchemaKeyword.DEFS.asString(), definitions);
+        syntheticRoot.put(SchemaKeyword.ID.asString(), new SimpleScalarNode(originUri));
 
         for (Class<?> clazz : classes) {
             // Give the generator the synthentic root AST and
             // tell it where generated definitions go within it.
-            String fragment = "#/" + SchemaKeyword.DEFS.string();
+            String fragment = "#/" + SchemaKeyword.DEFS.asString();
             generator.generate(syntheticRoot, fragment, clazz);
         }
 

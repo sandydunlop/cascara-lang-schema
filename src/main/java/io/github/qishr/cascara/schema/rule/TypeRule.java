@@ -15,7 +15,7 @@ public class TypeRule implements ValidationRule {
     @Override
     public void validate(AstNode node, String path, ValidationResult result) {
         if (node instanceof ScalarAstNode scalar) {
-            Object value = scalar.getPrimitiveValue();
+            Object value = scalar.getPrimitive();
             if (value == null) return; // Let RequiredRule handle "Missing" vs "Wrong Type"
             boolean valid = switch (expectedType) {
                 case STRING -> value instanceof String;

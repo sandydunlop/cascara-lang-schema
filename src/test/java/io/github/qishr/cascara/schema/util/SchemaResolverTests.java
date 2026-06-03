@@ -12,9 +12,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.StructuredDocument;
-import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
-import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
+import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
@@ -35,27 +35,27 @@ public class SchemaResolverTests {
     }
 
     StructuredDocument createTagDoc() {
-        // SimpleScalarNode id =
-        SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Tag")));
-        return new SimpleDocument(root);
+        // ReferenceScalarNode id =
+        ReferenceMapNode root = new ReferenceMapNode();
+        root.put("$id", new ReferenceScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Tag")));
+        return new ReferenceDocument(root);
     }
 
     StructuredDocument createTaskDoc() {
-        SimpleMapNode items = new SimpleMapNode();
-        items.put("$ref", new SimpleScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Tag")));
+        ReferenceMapNode items = new ReferenceMapNode();
+        items.put("$ref", new ReferenceScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Tag")));
 
-        SimpleMapNode tags = new SimpleMapNode();
-        tags.put("type", new SimpleScalarNode("array"));
+        ReferenceMapNode tags = new ReferenceMapNode();
+        tags.put("type", new ReferenceScalarNode("array"));
         tags.put("items", items);
 
-        SimpleMapNode properties = new SimpleMapNode();
+        ReferenceMapNode properties = new ReferenceMapNode();
         properties.put("tags", tags);
 
-        SimpleMapNode root = new SimpleMapNode();
-        root.put("$id", new SimpleScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Task")));
+        ReferenceMapNode root = new ReferenceMapNode();
+        root.put("$id", new ReferenceScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Task")));
         root.put("properties", properties);
-        return new SimpleDocument(root);
+        return new ReferenceDocument(root);
     }
 
     @Test
@@ -295,29 +295,29 @@ public class SchemaResolverTests {
     @Test
     void resolution_shouldSurviveDecompilationRoundTrip() {
         // 1. SETUP: Create the AST for 'doc' manually
-        SimpleMapNode rootAst = new SimpleMapNode();
-        rootAst.put("$id", new SimpleScalarNode("cascara://test"));
+        ReferenceMapNode rootAst = new ReferenceMapNode();
+        rootAst.put("$id", new ReferenceScalarNode("cascara://test"));
 
-        SimpleMapNode defsAst = new SimpleMapNode();
+        ReferenceMapNode defsAst = new ReferenceMapNode();
 
         // Create 'TestLayer' definition
-        SimpleMapNode testLayerAst = new SimpleMapNode();
-        testLayerAst.put("type", new SimpleScalarNode("object"));
+        ReferenceMapNode testLayerAst = new ReferenceMapNode();
+        testLayerAst.put("type", new ReferenceScalarNode("object"));
         defsAst.put("TestLayer", testLayerAst);
 
         rootAst.put("definitions", defsAst);
-        StructuredDocument doc = new SimpleDocument(rootAst);
+        StructuredDocument doc = new ReferenceDocument(rootAst);
 
         // 2. COMPILE: First pass
         Schema original = compiler.compile(doc, URI.create("cascara://test"));
 
         // 3. DECOMPILE: Move from Compiled Graph back to AST
         SchemaDecompiler decompiler = new SchemaDecompiler();
-        SimpleMapNode decompiledAst = decompiler.decompile(original).getRoot();
+        ReferenceMapNode decompiledAst = decompiler.decompile(original).getRoot();
 
         // 4. RE-COMPILE: Re-hydrate the AST back into a Compiled Schema
         // This is where the Migration Service was failing
-        Schema recompiled = compiler.compile(new SimpleDocument(decompiledAst), URI.create("cascara://test"));
+        Schema recompiled = compiler.compile(new ReferenceDocument(decompiledAst), URI.create("cascara://test"));
 
         // 5. ASSERT: Verify the graph is still traversable
         // We use the resolver directly to ensure the fragment logic is sound

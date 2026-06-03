@@ -15,10 +15,10 @@ import java.util.Set;
 import io.github.qishr.cascara.common.lang.annotation.DataField;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
-import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleSequenceNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
+import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
 import io.github.qishr.cascara.common.service.CapabilityQueries;
 import io.github.qishr.cascara.common.service.ServiceProviderLayer;
 import io.github.qishr.cascara.common.service.ServiceProviderMetadata;
@@ -39,11 +39,11 @@ public final class SchemaGenerator {
     private static final String OBJECT_PROPERTY_CLASS = "javafx.beans.property.ObjectProperty";
 
     private final Set<Class<?>> processingStack = new HashSet<>();
-    private final Map<Class<?>, SimpleMapNode> definitions = new LinkedHashMap<>();
+    private final Map<Class<?>, ReferenceMapNode> definitions = new LinkedHashMap<>();
     private final Set<TypeAnalyzer> typeAnalyzers = new HashSet<>();
 
     private boolean multiClassDocument = false;
-    private SimpleMapNode definitionsContainer;
+    private ReferenceMapNode definitionsContainer;
     private String definitionsLocation = "#/" + SchemaKeyword.DEFS.asString();
 
     private URI originUri;
@@ -52,24 +52,24 @@ public final class SchemaGenerator {
         typeAnalyzers.add(ta);
     }
 
-    public SimpleDocument generate(Object template) {
+    public ReferenceDocument generate(Object template) {
         return generate(null, null, null, template);
     }
 
-    public SimpleDocument generate(Class<?> clazz) {
+    public ReferenceDocument generate(Class<?> clazz) {
         return generate(null, null, clazz, null);
     }
 
-    public SimpleDocument generate(SimpleMapNode parentDoc, Class<?> clazz) {
+    public ReferenceDocument generate(ReferenceMapNode parentDoc, Class<?> clazz) {
         return generate(parentDoc, null, clazz, null);
     }
 
-    public SimpleDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz) {
+    public ReferenceDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz) {
         return generate(parentDoc, fragment, clazz, null);
     }
 
     // TODO: Perhaps fragment should be specified as a SchemaNode or AstNode?
-    public SimpleDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
+    public ReferenceDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
         processingStack.clear();
         definitions.clear();
         multiClassDocument = false;
@@ -88,43 +88,43 @@ public final class SchemaGenerator {
 
             // The caller must create the definitions container as we don't know
             // what concrete implementation it should be.
-            if (SchemaUtils.resolveFragment(parentDoc, fragment) instanceof SimpleMapNode map) {
+            if (SchemaUtils.resolveFragment(parentDoc, fragment) instanceof ReferenceMapNode map) {
                 definitionsContainer = map;
             } else {
                 throw new SchemaException("Path does not resolve to an object", fragment, originUri);
             }
         }
 
-        SimpleMapNode classRoot = generateClassRoot(clazz, template);
+        ReferenceMapNode classRoot = generateClassRoot(clazz, template);
 
         if (multiClassDocument) {
-            for (Map.Entry<Class<?>, SimpleMapNode> e : definitions.entrySet()) {
+            for (Map.Entry<Class<?>, ReferenceMapNode> e : definitions.entrySet()) {
                 String defName = e.getKey().getSimpleName();
                 definitionsContainer.put(defName, e.getValue());
             }
             definitionsContainer.put(clazz.getSimpleName(), classRoot);
         } else {
             if (!definitions.isEmpty()) {
-                SimpleMapNode defsNode = new SimpleMapNode();
-                for (Map.Entry<Class<?>, SimpleMapNode> e : definitions.entrySet()) {
+                ReferenceMapNode defsNode = new ReferenceMapNode();
+                for (Map.Entry<Class<?>, ReferenceMapNode> e : definitions.entrySet()) {
                     String defName = e.getKey().getSimpleName();
                     defsNode.put(defName, e.getValue());
                 }
                 classRoot.put(SchemaKeyword.DEFS.asString(), defsNode);
             }
         }
-        return new SimpleDocument(classRoot);
+        return new ReferenceDocument(classRoot);
     }
 
-    private SimpleMapNode generateClassRoot(Class<?> clazz, Object template) {
+    private ReferenceMapNode generateClassRoot(Class<?> clazz, Object template) {
         if (clazz == null) {
             clazz = template.getClass();
         }
-        SimpleMapNode root = new SimpleMapNode();
+        ReferenceMapNode root = new ReferenceMapNode();
         fillObjectMetadata(clazz, root);
         root.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.OBJECT.asString()));
 
-        SimpleMapNode properties = new SimpleMapNode();
+        ReferenceMapNode properties = new ReferenceMapNode();
         root.put(SchemaKeyword.PROPERTIES.asString(), properties);
 
         if (template == null) {
@@ -139,7 +139,7 @@ public final class SchemaGenerator {
         return root;
     }
 
-    private void fillObjectMetadata(Class<?> clazz, SimpleMapNode root) {
+    private void fillObjectMetadata(Class<?> clazz, ReferenceMapNode root) {
         if (clazz.isAnnotationPresent(SchemaDefinition.class)) {
             SchemaDefinition definition = clazz.getAnnotation(SchemaDefinition.class);
 
@@ -182,8 +182,8 @@ public final class SchemaGenerator {
         return field.getName();
     }
 
-    private SimpleMapNode createFieldNode(Field field, Object template) {
-        SimpleMapNode node = new SimpleMapNode();
+    private ReferenceMapNode createFieldNode(Field field, Object template) {
+        ReferenceMapNode node = new ReferenceMapNode();
         SchemaProperty sf = field.getAnnotation(SchemaProperty.class);
         node.put(SchemaKeyword.TITLE.asString(), scalar(sf.title()));
 
@@ -260,8 +260,8 @@ public final class SchemaGenerator {
         return field.getType();
     }
 
-    private SimpleMapNode createItemsNode(Class<?> elementType, Field field) {
-        SimpleMapNode items = new SimpleMapNode();
+    private ReferenceMapNode createItemsNode(Class<?> elementType, Field field) {
+        ReferenceMapNode items = new ReferenceMapNode();
 
         if (isStandardScalarType(elementType)) {
             fillTypeInfo(items, elementType, field);
@@ -274,7 +274,7 @@ public final class SchemaGenerator {
         return items;
     }
 
-    private void applyTypeAnalysis(Field field, SimpleMapNode targetAst) {
+    private void applyTypeAnalysis(Field field, ReferenceMapNode targetAst) {
         for (TypeAnalyzer ta : typeAnalyzers) {
             ta.analyze(field, targetAst);
             ta.analyze(field.getType(), targetAst);
@@ -282,19 +282,19 @@ public final class SchemaGenerator {
     }
 
     // TODO: This might not work with ObjectProperty fields
-    private void applyTypeAnalysis(Class<?> clazz, SimpleMapNode targetAst) {
+    private void applyTypeAnalysis(Class<?> clazz, ReferenceMapNode targetAst) {
         for (TypeAnalyzer ta : typeAnalyzers) {
             ta.analyze(clazz, targetAst);
         }
     }
 
-    private void applyExternalRef(SimpleMapNode node, Class<?> target, Field field) {
+    private void applyExternalRef(ReferenceMapNode node, Class<?> target, Field field) {
         CascaraSchemaUri schemaUri = new CascaraSchemaUri(target);
         String schemaUriString = schemaUri.toUri().toString();
         node.put(SchemaKeyword.REF.asString(), scalar(schemaUriString));
     }
 
-    private void applyInternalRef(SimpleMapNode node, Class<?> target) {
+    private void applyInternalRef(ReferenceMapNode node, Class<?> target) {
         ensureDefinition(target);
         node.put(SchemaKeyword.REF.asString(), scalar(definitionsLocation + "/" + target.getSimpleName()));
     }
@@ -305,12 +305,12 @@ public final class SchemaGenerator {
 
         processingStack.add(clazz);
         try {
-            SimpleMapNode def = new SimpleMapNode();
+            ReferenceMapNode def = new ReferenceMapNode();
             def.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.OBJECT.asString()));
 
             fillObjectMetadata(clazz, def);
 
-            SimpleMapNode properties = new SimpleMapNode();
+            ReferenceMapNode properties = new ReferenceMapNode();
 
             def.put(SchemaKeyword.PROPERTIES.asString(), properties);
 
@@ -334,7 +334,7 @@ public final class SchemaGenerator {
 
 
 
-    private void fillTypeInfo(SimpleMapNode node, Class<?> type, Field field) {
+    private void fillTypeInfo(ReferenceMapNode node, Class<?> type, Field field) {
         if (type == boolean.class || type == Boolean.class) {
             node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.BOOLEAN.asString()));
         } else if (type == int.class || type == Integer.class
@@ -346,7 +346,7 @@ public final class SchemaGenerator {
         } else if (type == String.class || type.isEnum()) {
             node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.STRING.asString()));
             if (type.isEnum()) {
-                SimpleSequenceNode enumNode = new SimpleSequenceNode();
+                ReferenceSequenceNode enumNode = new ReferenceSequenceNode();
                 for (Object ec : type.getEnumConstants()) {
                     enumNode.add(scalar(ec.toString()));
                 }
@@ -357,12 +357,12 @@ public final class SchemaGenerator {
         applyConstraints(node, field);
     }
 
-    private void applyConstraints(SimpleMapNode node, Field field) {
+    private void applyConstraints(ReferenceMapNode node, Field field) {
         if (field.isAnnotationPresent(StringConstraint.class)) {
             StringConstraint constraint = field.getAnnotation(StringConstraint.class);
 
             if (constraint.options().length > 0) {
-                SimpleSequenceNode enumNode = new SimpleSequenceNode();
+                ReferenceSequenceNode enumNode = new ReferenceSequenceNode();
                 for (String opt : constraint.options()) {
                     enumNode.add(scalar(opt));
                 }
@@ -396,7 +396,7 @@ public final class SchemaGenerator {
 
 
 
-    private void appendDefaultValue(SimpleMapNode node, Field field, Object instance) {
+    private void appendDefaultValue(ReferenceMapNode node, Field field, Object instance) {
         if (instance == null) return;
         try {
             field.setAccessible(true);
@@ -427,8 +427,8 @@ public final class SchemaGenerator {
         return fields;
     }
 
-    private SimpleScalarNode scalar(Object value) {
-        return new SimpleScalarNode(value);
+    private ReferenceScalarNode scalar(Object value) {
+        return new ReferenceScalarNode(value);
     }
 
     private boolean isStandardScalarType(Class<?> type) {

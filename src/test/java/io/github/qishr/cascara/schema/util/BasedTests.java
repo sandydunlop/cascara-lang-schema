@@ -13,9 +13,9 @@ import java.net.URI;
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
-import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
+import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.schema.structure.LazySchemaNode;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
 import io.github.qishr.cascara.schema.structure.ScalarSchemaNode;
@@ -55,17 +55,17 @@ public class BasedTests extends SchemaIntegrationTestBase {
         SchemaResolver localResolver = new SchemaResolver();
         SchemaCompiler compiler = new SchemaCompiler(localResolver);
 
-        SimpleMapNode addrAst = new SimpleMapNode();
-        addrAst.put("type", new SimpleScalarNode("string"));
+        ReferenceMapNode addrAst = new ReferenceMapNode();
+        addrAst.put("type", new ReferenceScalarNode("string"));
 
-        SimpleMapNode defsAst = new SimpleMapNode();
+        ReferenceMapNode defsAst = new ReferenceMapNode();
         defsAst.put("address", addrAst);
 
-        SimpleMapNode rootAst = new SimpleMapNode();
-        rootAst.put("$id", new SimpleScalarNode("file:///schema.json"));
+        ReferenceMapNode rootAst = new ReferenceMapNode();
+        rootAst.put("$id", new ReferenceScalarNode("file:///schema.json"));
         rootAst.put("definitions", defsAst);
 
-        Schema compiled = compiler.compile(new SimpleDocument(rootAst));
+        Schema compiled = compiler.compile(new ReferenceDocument(rootAst));
         ObjectSchemaNode rootSchema = (ObjectSchemaNode) compiled.getRoot();
 
         SchemaNode result = localResolver.resolve("#/definitions/address", rootSchema);

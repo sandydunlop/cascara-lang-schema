@@ -2,9 +2,9 @@ package io.github.qishr.cascara.schema.util;
 
 import java.net.URI;
 
-import io.github.qishr.cascara.common.lang.simple.SimpleDocument;
-import io.github.qishr.cascara.common.lang.simple.SimpleMapNode;
-import io.github.qishr.cascara.common.lang.simple.SimpleScalarNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
+import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 
@@ -24,13 +24,13 @@ public class SchemaBuilder {
     }
 
     public Schema buildSchema(URI originUri, Class<?>... classes)  {
-        SimpleDocument syntheticRootDoc;
+        ReferenceDocument syntheticRootDoc;
         Schema schema;
-        SimpleMapNode syntheticRoot = new SimpleMapNode();
-        SimpleMapNode definitions = new SimpleMapNode();
+        ReferenceMapNode syntheticRoot = new ReferenceMapNode();
+        ReferenceMapNode definitions = new ReferenceMapNode();
 
         syntheticRoot.put(SchemaKeyword.DEFS.asString(), definitions);
-        syntheticRoot.put(SchemaKeyword.ID.asString(), new SimpleScalarNode(originUri));
+        syntheticRoot.put(SchemaKeyword.ID.asString(), new ReferenceScalarNode(originUri));
 
         for (Class<?> clazz : classes) {
             // Give the generator the synthentic root AST and
@@ -39,7 +39,7 @@ public class SchemaBuilder {
             generator.generate(syntheticRoot, fragment, clazz);
         }
 
-        syntheticRootDoc = new SimpleDocument(syntheticRoot);
+        syntheticRootDoc = new ReferenceDocument(syntheticRoot);
         schema = compiler.compile(syntheticRootDoc);
 
         return schema;

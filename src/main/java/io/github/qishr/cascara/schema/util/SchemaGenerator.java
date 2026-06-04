@@ -21,7 +21,7 @@ import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
 import io.github.qishr.cascara.common.service.CapabilityQueries;
 import io.github.qishr.cascara.common.service.ServiceProviderLayer;
-import io.github.qishr.cascara.common.service.ServiceProviderMetadata;
+import io.github.qishr.cascara.common.service.ServiceMetadata;
 import io.github.qishr.cascara.common.type.TypeDescriptor;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
@@ -216,10 +216,10 @@ public final class SchemaGenerator {
             // If there is a type descriptor, use it.
             // If there isn't, then use a $ref
             ServiceProviderLayer rootLayer = ServiceProviderLayer.getRootLayer();
-            List<ServiceProviderMetadata> typeConverters = rootLayer.getProviders(
+            List<ServiceMetadata> typeConverters = rootLayer.getProviders(
                 TypeDescriptor.class,
                 CapabilityQueries.allOf(
-                    CapabilityQueries.hasExactValue("type", type.getName())
+                    CapabilityQueries.hasExactValue("javaType", type.getName())
                 )
             );
 

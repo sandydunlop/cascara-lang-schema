@@ -1,6 +1,6 @@
 package io.github.qishr.cascara.schema.util;
 
-import io.github.qishr.cascara.common.lang.StructuredDocument;
+import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
 import io.github.qishr.cascara.lang.json.processor.JsonConverter;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
@@ -42,8 +42,7 @@ class ClassSchemaGeneratorTest {
 
     @Test
     void rootHasCorrectNameAndType() {
-        var doc = generator.generate(SimpleEntity.class);
-        var root = (ReferenceMapNode) doc.getRoot();
+        var root = (ReferenceMapNode) generator.generate(SimpleEntity.class);
 
         // assertEquals("SimpleEntity", root.getString("name"));
         assertEquals("object", root.getString("type"));
@@ -51,8 +50,7 @@ class ClassSchemaGeneratorTest {
 
     @Test
     void generatesCorrectScalarProperties() {
-        var doc = generator.generate(SimpleEntity.class);
-        var root = (ReferenceMapNode) doc.getRoot();
+        var root = (ReferenceMapNode) generator.generate(SimpleEntity.class);
         var props = (ReferenceMapNode) root.get("properties");
 
         assertEquals("string", ((ReferenceMapNode) props.get("title")).getString("type"));
@@ -63,8 +61,7 @@ class ClassSchemaGeneratorTest {
 
     @Test
     void generatesNestedObjectProperty() {
-        var doc = generator.generate(NestedEntity.class);
-        var root = (ReferenceMapNode) doc.getRoot();
+        var root = (ReferenceMapNode) generator.generate(NestedEntity.class);
         var props = (ReferenceMapNode) root.get("properties");
 
         var child = (ReferenceMapNode) props.get("child");
@@ -115,10 +112,10 @@ class ClassSchemaGeneratorTest {
         JsonConverter converter = new JsonConverter();
         SchemaDecompiler decompiler = new SchemaDecompiler();
 
-        StructuredDocument doc1a = decompiler.decompile(schema1);
+        AstNode doc1a = decompiler.decompile(schema1);
         String json1 = converter.toText(doc1a);
 
-        StructuredDocument doc2a = decompiler.decompile(schema2);
+        AstNode doc2a = decompiler.decompile(schema2);
         String json2 = converter.toText(doc2a);
 
         assertEquals(json1, json2);
@@ -148,8 +145,7 @@ class ClassSchemaGeneratorTest {
             @SchemaProperty public boolean active;
         }
 
-        var doc = generator.generate(Simple.class);
-        var root = (ReferenceMapNode) doc.getRoot();
+        var root = (ReferenceMapNode) generator.generate(Simple.class);
         var props = (ReferenceMapNode) root.get("properties");
 
         assertEquals("string", ((ReferenceMapNode) props.get("name")).getString("type"));
@@ -166,8 +162,7 @@ class ClassSchemaGeneratorTest {
             @SchemaProperty public Address address;
         }
 
-        var doc = generator.generate(Person.class);
-        var root = (ReferenceMapNode) doc.getRoot();
+        var root = (ReferenceMapNode) generator.generate(Person.class);
         var props = (ReferenceMapNode) root.get("properties");
         var address = (ReferenceMapNode) props.get("address");
 
@@ -184,8 +179,7 @@ class ClassSchemaGeneratorTest {
             @SchemaProperty public List<Tag> tags;
         }
 
-        var doc = generator.generate(Entry.class);
-        var root = (ReferenceMapNode) doc.getRoot();
+        var root = (ReferenceMapNode) generator.generate(Entry.class);
         var props = (ReferenceMapNode) root.get("properties");
         var tags = (ReferenceMapNode) props.get("tags");
 
@@ -210,8 +204,7 @@ class ClassSchemaGeneratorTest {
             @SchemaProperty public List<Tag> tags;
         }
 
-        var doc = generator.generate(Person.class);
-        var root = (ReferenceMapNode) doc.getRoot();
+        var root = (ReferenceMapNode) generator.generate(Person.class);
         var props = (ReferenceMapNode) root.get("properties");
 
         // scalar
@@ -240,7 +233,7 @@ class ClassSchemaGeneratorTest {
         }
 
         var doc = generator.generate(Person.class);
-        var props = (ReferenceMapNode) ((ReferenceMapNode) doc.getRoot()).get("properties");
+        var props = (ReferenceMapNode) ((ReferenceMapNode) doc).get("properties");
         var address = (ReferenceMapNode) props.get("address");
 
         assertFalse(address.containsKey("properties"));

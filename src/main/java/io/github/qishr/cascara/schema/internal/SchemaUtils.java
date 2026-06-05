@@ -1,6 +1,5 @@
 package io.github.qishr.cascara.schema.internal;
 
-import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.schema.SchemaException;
@@ -18,9 +17,6 @@ public class SchemaUtils {
         // Split by '/', then filter out empty segments (like the leading one in /definitions)
         String[] parts = path.split("/");
         AstNode currentNode = root;
-        if (currentNode instanceof StructuredDocument doc) {
-            currentNode = doc.getRoot();
-        }
 
         for (String part : parts) {
             if (part.isEmpty()) continue;

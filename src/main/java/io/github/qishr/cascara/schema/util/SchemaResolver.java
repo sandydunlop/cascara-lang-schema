@@ -16,7 +16,6 @@ import io.github.qishr.cascara.common.io.ContentLoader;
 import io.github.qishr.cascara.common.io.IOUtils;
 import io.github.qishr.cascara.common.content.ResourceContent;
 import io.github.qishr.cascara.common.io.UriScheme;
-import io.github.qishr.cascara.common.lang.StructuredDocument;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
@@ -77,7 +76,7 @@ public class SchemaResolver {
             }
         }
 
-        StructuredDocument doc = parseContent(content);
+        AstNode doc = parseContent(content);
         SchemaCompiler compiler = new SchemaCompiler(this);
         return compiler.compile(doc, uri);
     }
@@ -171,9 +170,8 @@ public class SchemaResolver {
                 generator.registerTypeAnalyzer(ta);
             }
         }
-        StructuredDocument schemaDoc = generator.generate(clazz);
-        Schema schema = compiler.compile(schemaDoc, originUri);
-        return schema;
+        AstNode schemaDoc = generator.generate(clazz);
+        return compiler.compile(schemaDoc, originUri);
     }
 
     /// Internal version that carries the scope
@@ -367,7 +365,7 @@ public class SchemaResolver {
         }
     }
 
-    private StructuredDocument parseContent(ResourceContent res) {
+    private AstNode parseContent(ResourceContent res) {
         String contentType;
         if (res.contentType() == null) {
             contentType = "application/schema+json";

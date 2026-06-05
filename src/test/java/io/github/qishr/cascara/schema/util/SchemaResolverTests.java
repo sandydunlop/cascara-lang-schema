@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import io.github.qishr.cascara.common.lang.StructuredDocument;
-import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
+import io.github.qishr.cascara.lang.json.ast.JsonNode;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
@@ -34,14 +34,14 @@ public class SchemaResolverTests {
         decompiler = new SchemaDecompiler();
     }
 
-    StructuredDocument createTagDoc() {
+    ReferenceNode createTagDoc() {
         // ReferenceScalarNode id =
         ReferenceMapNode root = new ReferenceMapNode();
         root.put("$id", new ReferenceScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Tag")));
-        return new ReferenceDocument(root);
+        return root;
     }
 
-    StructuredDocument createTaskDoc() {
+    ReferenceNode createTaskDoc() {
         ReferenceMapNode items = new ReferenceMapNode();
         items.put("$ref", new ReferenceScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Tag")));
 
@@ -55,14 +55,14 @@ public class SchemaResolverTests {
         ReferenceMapNode root = new ReferenceMapNode();
         root.put("$id", new ReferenceScalarNode(URI.create("cascara://core/schema-service/dynamic/cascara.schema/Task")));
         root.put("properties", properties);
-        return new ReferenceDocument(root);
+        return root;
     }
 
     @Test
     void test_synthetic_uri() {
 
-        StructuredDocument tagDoc = createTagDoc();
-        StructuredDocument taskDoc = createTaskDoc();
+        ReferenceNode tagDoc = createTagDoc();
+        ReferenceNode taskDoc = createTaskDoc();
 
         SchemaResolver resolver = new SchemaResolver();
         SchemaCompiler compiler = new SchemaCompiler(resolver);
@@ -107,7 +107,7 @@ public class SchemaResolverTests {
                 """;
 
         JsonParser parser = new JsonParser();
-        StructuredDocument doc = parser.parse(json);
+        JsonNode doc = parser.parse(json);
         SchemaResolver resolver = new SchemaResolver();
         SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema schema = compiler.compile(doc);
@@ -143,7 +143,7 @@ public class SchemaResolverTests {
         // 1. Setup a JSON document
         String json = "{ \"$id\": \"cascara://core/schema-service/dynamic/cascara.schema/json\", \"type\": \"object\" }";
         JsonParser parser = new JsonParser();
-        StructuredDocument doc = parser.parse(json);
+        JsonNode doc = parser.parse(json);
         URI uri = URI.create("cascara://core/schema-service/dynamic/cascara.schema/json");
 
         // 2. Register it as a compiled schema (simulating what the compiler does)
@@ -173,7 +173,7 @@ public class SchemaResolverTests {
             """;
 
         JsonParser parser = new JsonParser();
-        StructuredDocument doc = parser.parse(json);
+        JsonNode doc = parser.parse(json);
         SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         // Compiling the document should populate the Resolver's caches
@@ -211,7 +211,7 @@ public class SchemaResolverTests {
 
         // 3. Parse and Compile
         JsonParser parser = new JsonParser();
-        StructuredDocument doc = parser.parse(json);
+        JsonNode doc = parser.parse(json);
         SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema compiled = compiler.compile(doc, docUri);
         resolver.registerSchema(docUri, compiled);
@@ -254,7 +254,7 @@ public class SchemaResolverTests {
             """;
 
         JsonParser parser = new JsonParser();
-        StructuredDocument doc = parser.parse(json);
+        JsonNode doc = parser.parse(json);
         SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema compiled = compiler.compile(doc, docUri);
         resolver.registerSchema(docUri, compiled);
@@ -306,18 +306,18 @@ public class SchemaResolverTests {
         defsAst.put("TestLayer", testLayerAst);
 
         rootAst.put("definitions", defsAst);
-        StructuredDocument doc = new ReferenceDocument(rootAst);
+        // StructuredDocument doc = new ReferenceDocument(rootAst);
 
         // 2. COMPILE: First pass
-        Schema original = compiler.compile(doc, URI.create("cascara://test"));
+        Schema original = compiler.compile(rootAst, URI.create("cascara://test"));
 
         // 3. DECOMPILE: Move from Compiled Graph back to AST
         SchemaDecompiler decompiler = new SchemaDecompiler();
-        ReferenceMapNode decompiledAst = decompiler.decompile(original).getRoot();
+        ReferenceMapNode decompiledAst = decompiler.decompile(original);
 
         // 4. RE-COMPILE: Re-hydrate the AST back into a Compiled Schema
         // This is where the Migration Service was failing
-        Schema recompiled = compiler.compile(new ReferenceDocument(decompiledAst), URI.create("cascara://test"));
+        Schema recompiled = compiler.compile(decompiledAst, URI.create("cascara://test"));
 
         // 5. ASSERT: Verify the graph is still traversable
         // We use the resolver directly to ensure the fragment logic is sound

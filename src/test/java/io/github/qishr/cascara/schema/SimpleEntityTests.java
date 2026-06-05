@@ -10,7 +10,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
-import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
+import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
 import io.github.qishr.cascara.schema.util.SchemaGenerator;
 import io.github.qishr.cascara.schema.util.SchemaResolver;
@@ -28,7 +28,7 @@ public class SimpleEntityTests {
         SchemaResolver resolver = new SchemaResolver();
         SchemaCompiler compiler = new SchemaCompiler(resolver);
 
-        ReferenceDocument doc = generator.generate(SimpleEntity.class);
+        ReferenceNode doc = generator.generate(SimpleEntity.class);
         Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
 
         Map<String, SchemaNode> props = schema.getRoot().getProperties();
@@ -42,7 +42,7 @@ public class SimpleEntityTests {
         SchemaGenerator generator = new SchemaGenerator();
         SchemaCompiler compiler = new SchemaCompiler(new SchemaResolver());
 
-        ReferenceDocument doc = generator.generate(RefEntity.class);
+        ReferenceNode doc = generator.generate(RefEntity.class);
         Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
 
         SchemaNode child = schema.getRoot().getProperties().get("child");
@@ -77,7 +77,7 @@ public class SimpleEntityTests {
         SchemaResolver resolver = new SchemaResolver();
         SchemaCompiler compiler = new SchemaCompiler(resolver);
 
-        ReferenceDocument doc = generator.generate(IgnoreEntity.class);
+        ReferenceNode doc = generator.generate(IgnoreEntity.class);
         Schema schema = compiler.compile(doc, URI.create("runtime://schema"));
 
         Map<String, SchemaNode> props = schema.getRoot().getProperties();
@@ -94,7 +94,7 @@ public class SimpleEntityTests {
         SchemaCompiler compiler = new SchemaCompiler(resolver);
 
         URI uri = URI.create("runtime://schema");
-        ReferenceDocument doc = generator.generate(RefEntity.class);
+        ReferenceNode doc = generator.generate(RefEntity.class);
         Schema schema = compiler.compile(doc, uri);
 
         SchemaNode children = schema.getRoot().getProperties().get("children");

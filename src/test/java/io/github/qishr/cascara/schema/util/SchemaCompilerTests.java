@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
@@ -49,7 +48,7 @@ public class SchemaCompilerTests {
         root.put("$id", new ReferenceScalarNode("cascara://core/schema-service/dynamic/cascara.schema/compiler-unevaluated-test"));
         root.put("definitions", defs);
 
-        Schema compiled = compiler.compile(new ReferenceDocument(root));
+        Schema compiled = compiler.compile(root);
 
         ObjectSchemaNode childNode = (ObjectSchemaNode) compiled.getRoot()
                 .getDefinition("child");
@@ -91,7 +90,7 @@ public class SchemaCompilerTests {
         root.put("$id", new ReferenceScalarNode("cascara://core/schema-service/dynamic/cascara.schema/compiler-flatten-test"));
         root.put("definitions", defs);
 
-        Schema compiled = compiler.compile(new ReferenceDocument(root));
+        Schema compiled = compiler.compile(root);
 
         ObjectSchemaNode childNode = (ObjectSchemaNode) compiled.getRoot()
                 .getDefinition("child");
@@ -108,7 +107,7 @@ public class SchemaCompilerTests {
         root.put("type", new ReferenceScalarNode("object"));
         root.put("additionalProperties", new ReferenceScalarNode(false));
 
-        Schema compiled = compiler.compile(new ReferenceDocument(root));
+        Schema compiled = compiler.compile(root);
         ObjectSchemaNode rootNode = (ObjectSchemaNode) compiled.getRoot();
 
         assertFalse(rootNode.areAdditionalPropertiesAllowed());

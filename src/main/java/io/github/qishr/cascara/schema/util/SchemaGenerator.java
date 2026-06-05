@@ -15,8 +15,8 @@ import java.util.Set;
 import io.github.qishr.cascara.common.lang.annotation.DataField;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
-import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
 import io.github.qishr.cascara.common.service.CapabilityQueries;
@@ -29,6 +29,7 @@ import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.annotation.ContentMediaType;
 import io.github.qishr.cascara.schema.annotation.SchemaDefinition;
 import io.github.qishr.cascara.schema.annotation.SchemaProperty;
+import io.github.qishr.cascara.schema.constraint.FormatConstraint;
 import io.github.qishr.cascara.schema.constraint.NumberConstraint;
 import io.github.qishr.cascara.schema.constraint.ReadOnly;
 import io.github.qishr.cascara.schema.constraint.StringConstraint;
@@ -52,24 +53,24 @@ public final class SchemaGenerator {
         typeAnalyzers.add(ta);
     }
 
-    public ReferenceDocument generate(Object template) {
+    public ReferenceNode generate(Object template) {
         return generate(null, null, null, template);
     }
 
-    public ReferenceDocument generate(Class<?> clazz) {
+    public ReferenceNode generate(Class<?> clazz) {
         return generate(null, null, clazz, null);
     }
 
-    public ReferenceDocument generate(ReferenceMapNode parentDoc, Class<?> clazz) {
+    public ReferenceNode generate(ReferenceMapNode parentDoc, Class<?> clazz) {
         return generate(parentDoc, null, clazz, null);
     }
 
-    public ReferenceDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz) {
+    public ReferenceNode generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz) {
         return generate(parentDoc, fragment, clazz, null);
     }
 
     // TODO: Perhaps fragment should be specified as a SchemaNode or AstNode?
-    public ReferenceDocument generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
+    public ReferenceNode generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
         processingStack.clear();
         definitions.clear();
         multiClassDocument = false;
@@ -113,7 +114,7 @@ public final class SchemaGenerator {
                 classRoot.put(SchemaKeyword.DEFS.asString(), defsNode);
             }
         }
-        return new ReferenceDocument(classRoot);
+        return classRoot;
     }
 
     private ReferenceMapNode generateClassRoot(Class<?> clazz, Object template) {
@@ -375,6 +376,11 @@ public final class SchemaGenerator {
                 node.put(SchemaKeyword.MAX_LENGTH.asString(), scalar(constraint.maxLength()));
             }
             // TODO: pattern, regex rule
+        }
+
+        if (field.isAnnotationPresent(FormatConstraint.class)) {
+            FormatConstraint format = field.getAnnotation(FormatConstraint.class);
+            node.put(SchemaKeyword.FORMAT.asString(), scalar(format.value()));
         }
 
         if (field.isAnnotationPresent(ReadOnly.class)) {

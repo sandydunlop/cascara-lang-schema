@@ -13,7 +13,6 @@ import java.net.URI;
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
-import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.schema.structure.LazySchemaNode;
@@ -61,11 +60,12 @@ public class BasedTests extends SchemaIntegrationTestBase {
         ReferenceMapNode defsAst = new ReferenceMapNode();
         defsAst.put("address", addrAst);
 
+        URI uri = URI.create("file:///schema.json");
         ReferenceMapNode rootAst = new ReferenceMapNode();
-        rootAst.put("$id", new ReferenceScalarNode("file:///schema.json"));
+        rootAst.put("$id", new ReferenceScalarNode(uri.toString()));
         rootAst.put("definitions", defsAst);
 
-        Schema compiled = compiler.compile(new ReferenceDocument(rootAst));
+        Schema compiled = compiler.compile(rootAst, uri);
         ObjectSchemaNode rootSchema = (ObjectSchemaNode) compiled.getRoot();
 
         SchemaNode result = localResolver.resolve("#/definitions/address", rootSchema);

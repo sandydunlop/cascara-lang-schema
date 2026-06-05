@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
-import io.github.qishr.cascara.lang.json.JsonDocument;
+import io.github.qishr.cascara.lang.json.ast.JsonNode;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaType;
@@ -77,7 +77,7 @@ public class SystemTests {
               }
             """;
 
-        JsonDocument doc = new JsonParser().parse(json);
+        JsonNode doc = new JsonParser().parse(json);
         Schema compiled = compiler.compile(doc);
 
         // 2. Resolve the "task" node
@@ -188,10 +188,10 @@ public class SystemTests {
             }
             """;
 
-        JsonDocument doc = new JsonParser().parse(json);
+        JsonNode doc = new JsonParser().parse(json);
         Schema compiled = compiler.compile(doc);
         SchemaDecompiler decompiler = new SchemaDecompiler();
-        MapAstNode<?,?> root = decompiler.decompile(compiled).getRoot();
+        MapAstNode<?,?> root = (MapAstNode<?,?>)decompiler.decompile(compiled);
         if (root.get("$defs") instanceof MapAstNode defs) {
             if (defs.get("releasedModule") instanceof MapAstNode rm) {
                 if (rm.get("properties") instanceof MapAstNode properties) {

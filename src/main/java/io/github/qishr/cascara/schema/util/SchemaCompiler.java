@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.github.qishr.cascara.common.diagnostic.Reporter;
-import io.github.qishr.cascara.common.diagnostic.SimpleReporter;
-import io.github.qishr.cascara.common.lang.StructuredDocument;
+import io.github.qishr.cascara.common.diagnostic.StandardReporter;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.MapEntryAstNode;
@@ -47,7 +46,7 @@ public class SchemaCompiler {
     private static final String ITEM = "item";
 
     private SchemaResolver resolver;
-    private Reporter reporter = new SimpleReporter();
+    private Reporter reporter = new StandardReporter();
 
     @Deprecated
     public SchemaCompiler(SchemaResolver resolver, boolean resolveRefs) {
@@ -76,17 +75,11 @@ public class SchemaCompiler {
         return this;
     }
 
-    public Schema compile(StructuredDocument doc) {
-        return compile(doc, doc.getOriginUri());
+    public Schema compile(AstNode root) {
+        return compile(root, null);
     }
 
-    public Schema compile(StructuredDocument doc, URI originUri) {
-        if (doc == null) {
-            reporter.error(null, "Document must not be null");
-            return null;
-        }
-        AstNode root = doc.getRoot();
-
+    public Schema compile(AstNode root, URI originUri) {
         if (!(root instanceof MapAstNode map)) {
             reporter.error(null, "Document root must be an AstMapNode");
             return null;

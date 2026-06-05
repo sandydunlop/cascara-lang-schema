@@ -10,4 +10,6 @@ module cascara.schema {
     exports io.github.qishr.cascara.schema.constraint;
     exports io.github.qishr.cascara.schema.rule;
     exports io.github.qishr.cascara.schema.util;
+
+    opens io.github.qishr.cascara.schema.util;
 }

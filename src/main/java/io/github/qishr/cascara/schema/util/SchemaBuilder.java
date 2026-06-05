@@ -2,7 +2,6 @@ package io.github.qishr.cascara.schema.util;
 
 import java.net.URI;
 
-import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.schema.Schema;
@@ -24,7 +23,6 @@ public class SchemaBuilder {
     }
 
     public Schema buildSchema(URI originUri, Class<?>... classes)  {
-        ReferenceDocument syntheticRootDoc;
         Schema schema;
         ReferenceMapNode syntheticRoot = new ReferenceMapNode();
         ReferenceMapNode definitions = new ReferenceMapNode();
@@ -39,8 +37,7 @@ public class SchemaBuilder {
             generator.generate(syntheticRoot, fragment, clazz);
         }
 
-        syntheticRootDoc = new ReferenceDocument(syntheticRoot);
-        schema = compiler.compile(syntheticRootDoc);
+        schema = compiler.compile(syntheticRoot, originUri);
 
         return schema;
     }

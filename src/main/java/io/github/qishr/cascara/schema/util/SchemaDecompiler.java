@@ -5,9 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.github.qishr.cascara.common.lang.QuoteStyle;
-import io.github.qishr.cascara.common.lang.reference.ReferenceDocument;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapEntryNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
+import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
 import io.github.qishr.cascara.schema.Schema;
@@ -32,7 +32,7 @@ public final class SchemaDecompiler {
 
     private URI originUri;
 
-    public ReferenceDocument decompile(Schema compiled) {
+    public ReferenceMapNode decompile(Schema compiled) {
         if (compiled == null || compiled.getRoot() == null) return null;
 
         SchemaNode compiledRoot = compiled.getRoot();
@@ -54,7 +54,7 @@ public final class SchemaDecompiler {
         for (ReferenceMapEntryNode entry : decompiled.getEntries()) {
             root.put(entry.getKey(), entry.getValue());
         }
-        return new ReferenceDocument(root);
+        return root;
     }
 
     private ReferenceMapNode decompileInternal(SchemaNode compiled) throws SchemaException {

@@ -11,6 +11,7 @@ import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
 import io.github.qishr.cascara.schema.Schema;
+import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.SchemaType;
@@ -159,7 +160,7 @@ public final class SchemaDecompiler {
         SchemaNode template = array.getItemSchema();
         if (template instanceof LazySchemaNode lazy) {
             if (lazy.getRef() == null || lazy.getRef().isEmpty()) {
-                throw new SchemaException("Missing $ref: ", array.getOriginUri().toString(), originUri);
+                throw new SchemaException(originUri, SchemaDiagnosticCode.MISSING_REF, array.getOriginUri());
             }
             items.put(SchemaKeyword.REF.asString(), scalarValue(lazy.getRef()));
         }

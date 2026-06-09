@@ -23,6 +23,7 @@ import io.github.qishr.cascara.common.service.CapabilityQueries;
 import io.github.qishr.cascara.common.service.ServiceProviderLayer;
 import io.github.qishr.cascara.common.service.ServiceMetadata;
 import io.github.qishr.cascara.common.type.TypeDescriptor;
+import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.SchemaType;
@@ -92,7 +93,7 @@ public final class SchemaGenerator {
             if (SchemaUtils.resolveFragment(parentDoc, fragment) instanceof ReferenceMapNode map) {
                 definitionsContainer = map;
             } else {
-                throw new SchemaException("Path does not resolve to an object", fragment, originUri);
+                throw new SchemaException(originUri, fragment, SchemaDiagnosticCode.NOT_OBJECT);
             }
         }
 

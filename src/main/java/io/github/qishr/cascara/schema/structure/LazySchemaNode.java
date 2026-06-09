@@ -1,6 +1,7 @@
 package io.github.qishr.cascara.schema.structure;
 
 import io.github.qishr.cascara.common.lang.ast.AstNode;
+import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.rule.ValidationRule;
@@ -59,7 +60,7 @@ public class LazySchemaNode extends BaseSchemaNode {
 
             if (result == null) {
                 // Fallback for error reporting
-                throw new SchemaException("Resolution failed", ref, getStartLine(), getStartColumn(), getOriginUri());
+                throw new SchemaException(getOriginUri(), ref, getStartLine(), getStartColumn(), SchemaDiagnosticCode.RESOLUTION_FAILED);
             }
         }
         return resolvedNode;

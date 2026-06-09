@@ -14,7 +14,9 @@ import java.util.Set;
 
 import io.github.qishr.cascara.common.io.ContentLoader;
 import io.github.qishr.cascara.common.io.IOUtils;
+import io.github.qishr.cascara.common.io.ResourceException;
 import io.github.qishr.cascara.common.content.ResourceContent;
+import io.github.qishr.cascara.common.diagnostic.LocalizableException;
 import io.github.qishr.cascara.common.io.UriScheme;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
@@ -25,6 +27,7 @@ import io.github.qishr.cascara.common.service.ServiceException;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 
 import io.github.qishr.cascara.schema.Schema;
+import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
 import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.internal.SchemaUtils;
@@ -71,8 +74,8 @@ public class SchemaResolver {
         if (content == null) {
             try {
                 content = contentLoaderService.getContent(uri);
-            } catch (Exception e) {
-                throw new SchemaException(e.getMessage(), e, uri);
+            } catch (LocalizableException e) {
+                throw new SchemaException(e);
             }
         }
 
@@ -206,8 +209,8 @@ public class SchemaResolver {
         SchemaNode schemaNode = resolveFragment(schemaDoc, fragment);
 
         if (schemaNode == null) {
-            throw new SchemaException("Resolution failed", ref, relativeTo.getStartLine(),
-                                      relativeTo.getStartColumn(), baseUri);
+            throw new SchemaException(baseUri, ref, relativeTo.getStartLine(),
+                                      relativeTo.getStartColumn(), SchemaDiagnosticCode.RESOLUTION_FAILED);
         }
 
         // 5. Update Cache and return
@@ -263,7 +266,7 @@ public class SchemaResolver {
         SchemaNode found = findNodeByAst(schemaDoc.getRoot(), targetAst);
 
         if (found == null) {
-            throw new SchemaException("Could not find node for fragment", fragment, schemaDoc.getOriginUri());
+            throw new SchemaException(schemaDoc.getOriginUri(), fragment, SchemaDiagnosticCode.NODE_NOT_FOUND);
         }
 
         // 3. Update the Dynamic Scope and return
@@ -413,14 +416,14 @@ public class SchemaResolver {
                 }
             }
         } catch (IOException e) {
-            throw new SchemaException("Failed to initialize built-in meta-schemas", e, null);
+            throw new SchemaException((URI)null, e, SchemaDiagnosticCode.META_INITIALIZATION_FAILURE);
         }
 
         // 2. Temporarily swap the content loader for one that only loads cached meta schemas
         ContentLoader realLoader = contentLoaderService;
         contentLoaderService = new ContentLoader() {
             @Override
-            public ResourceContent getContent(URI uri) throws IOException {
+            public ResourceContent getContent(URI uri) throws ResourceException {
                 return metaSchemaResources.get(uri);
             }
         };
@@ -436,7 +439,7 @@ public class SchemaResolver {
 
     private class SchemaContentLoader implements ContentLoader {
         @Override
-        public ResourceContent getContent(URI uri) throws IOException {
+        public ResourceContent getContent(URI uri) throws LocalizableException {
             return IOUtils.getResource(uri);
         }
     }

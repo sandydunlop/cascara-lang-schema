@@ -9,12 +9,14 @@ import java.util.Map;
 
 import io.github.qishr.cascara.common.diagnostic.Reporter;
 import io.github.qishr.cascara.common.diagnostic.StandardReporter;
+import io.github.qishr.cascara.common.diagnostic.code.GenericDiagnosticCode;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.MapEntryAstNode;
 import io.github.qishr.cascara.common.lang.ast.ScalarAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
 import io.github.qishr.cascara.schema.Schema;
+import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.internal.CompiledSchema;
@@ -63,7 +65,7 @@ public class SchemaCompiler {
 
     public SchemaCompiler setReporter(Reporter reporter) {
         if (reporter == null) {
-            this.reporter.error(null, "Reporter must not be null");
+            this.reporter.error(GenericDiagnosticCode.ERROR, "Reporter must not be null");
         } else {
             this.reporter = reporter;
         }
@@ -81,14 +83,14 @@ public class SchemaCompiler {
 
     public Schema compile(AstNode root, URI originUri) {
         if (!(root instanceof MapAstNode map)) {
-            reporter.error(null, "Document root must be an AstMapNode");
+            reporter.error(SchemaDiagnosticCode.ROOT_MUST_BE_MAP);
             return null;
         }
 
         if (originUri == null) {
             AstNode idNode = map.get(SchemaKeyword.ID.asString());
             if (!(idNode instanceof ScalarAstNode scalarId)) {
-                reporter.error(null, "Document must contain $id or origin URI must be given to compiler");
+                reporter.error(SchemaDiagnosticCode.NO_ID);
                 return null;
             }
             originUri = URI.create(scalarId.asString());
@@ -122,8 +124,7 @@ public class SchemaCompiler {
                 Schema metaDoc = resolver.getSchema(metaUri);
                 metaRoot = metaDoc.getRoot();
             } catch (Exception e) {
-                reporter.warn(null, "Could not resolve meta-schema: " + metaUri);
-                reporter.warn(null, e.getMessage());
+                reporter.warn(GenericDiagnosticCode.WARN, "Could not resolve meta-schema " + metaUri + ": " + e.getMessage());
             }
         }
 
@@ -167,12 +168,12 @@ public class SchemaCompiler {
                     try {
                         currentMeta = resolver.getSchema(metaUri).getRoot();
                     } catch (Exception e) {
-                        reporter.warn(null, "Could not resolve local $schema: " + localSchema);
+                        reporter.warn(SchemaDiagnosticCode.LOCAL_RESOLUTION_FAILED, localSchema);
                     }
                 }
             } catch (Exception e) {
                 // Fallback to the parent meta if the local one fails to load
-                reporter.warn(null, "Could not resolve local $schema: " + localSchema);
+                reporter.warn(SchemaDiagnosticCode.LOCAL_RESOLUTION_FAILED, localSchema);
             }
         }
 

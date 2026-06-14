@@ -365,20 +365,21 @@ public class SchemaCompiler {
 
                             if (valBase instanceof ScalarAstNode valNode) {
 
-                                // cascara://organizer/CASC-00028C57
-                                // TODO: names of title key and description key need
-                                // to be user-overridable
+                                // // cascara://organizer/CASC-00028C57
+                                // // TODO: names of title key and description key need
+                                // // to be user-overridable
+
                                 String stringValue = valNode.asString();
+
                                 if (key.equals(SchemaGenerator.TITLE_KEY)) {
                                     schemaNode.setTitleKey(stringValue);
-                                } else if (key.equals(SchemaGenerator.TITLE_KEY)) {
+                                } else if (key.equals(SchemaGenerator.DESCRIPTION_KEY)) {
                                     schemaNode.setDescriptionKey(stringValue);
                                 } else {
                                     // Handle simple extensions (x-tracked: true)
-                                    // schemaNode.setExtension(key, valNode.getPrimitive());
-                                    schemaNode.setExtension(key, stringValue);
+                                    // we use getPrimitive here so that booleans remain booleans, etc.
+                                    schemaNode.setExtension(key, valNode.getPrimitive());
                                 }
-
 
 
                             } else if (valBase instanceof MapAstNode mapNode) {

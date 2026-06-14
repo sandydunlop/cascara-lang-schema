@@ -9,6 +9,8 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.FIELD)
 public @interface SchemaProperty {
     String title() default "";
+    String titleKey() default "";
     String description() default "";
+    String descriptionKey() default "";
     boolean required() default false;
 }

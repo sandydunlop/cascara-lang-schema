@@ -42,6 +42,10 @@ public final class SchemaGenerator {
 
     private static final String OBJECT_PROPERTY_CLASS = "javafx.beans.property.ObjectProperty";
 
+    // TODO: These should be able to be overridden by the caller
+    public static final String TITLE_KEY = "x-i18n-title";
+    public static final String DESCRIPTION_KEY = "x-i18n-description";
+
     private final Set<Class<?>> processingStack = new HashSet<>();
     private final Map<Class<?>, ReferenceMapNode> definitions = new LinkedHashMap<>();
     private final Set<TypeAnalyzer> typeAnalyzers = new HashSet<>();
@@ -164,6 +168,18 @@ public final class SchemaGenerator {
                 root.put(SchemaKeyword.DESCRIPTION.asString(), clazz.getTypeName());
             }
 
+
+            // cascara://organizer/CASC-00028C57
+            // TODO: names of title key and description key need
+            // to be user-overridable
+            if (!definition.titleKey().isEmpty()) {
+                root.put(TITLE_KEY, scalar(definition.titleKey()));
+            }
+            if (!definition.descriptionKey().isEmpty()) {
+                root.put(DESCRIPTION_KEY, scalar(definition.descriptionKey()));
+            }
+
+
             if (clazz.isAnnotationPresent(ContentMediaType.class)) {
                 ContentMediaType mediaType = clazz.getAnnotation(ContentMediaType.class);
                 root.put(SchemaKeyword.CONTENT_MEDIA_TYPE.asString(), mediaType.value());
@@ -199,6 +215,18 @@ public final class SchemaGenerator {
         if (!sf.description().isEmpty()) {
             node.put(SchemaKeyword.DESCRIPTION.asString(), scalar(sf.description()));
         }
+
+
+        // cascara://organizer/CASC-00028C57
+        // TODO: names of title key and description key need
+        // to be user-overridable
+        if (!sf.titleKey().isEmpty()) {
+            node.put(TITLE_KEY, scalar(sf.titleKey()));
+        }
+        if (!sf.descriptionKey().isEmpty()) {
+            node.put(DESCRIPTION_KEY, scalar(sf.descriptionKey()));
+        }
+
 
         if (field.isAnnotationPresent(ContentMediaType.class)) {
             ContentMediaType mediaType = field.getAnnotation(ContentMediaType.class);

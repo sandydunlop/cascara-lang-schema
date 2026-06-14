@@ -369,17 +369,17 @@ public class SchemaCompiler {
                                 // // TODO: names of title key and description key need
                                 // // to be user-overridable
 
-                                String stringValue = valNode.asString();
+                                // String stringValue = valNode.asString();
 
-                                if (key.equals(SchemaGenerator.TITLE_KEY)) {
-                                    schemaNode.setTitleKey(stringValue);
-                                } else if (key.equals(SchemaGenerator.DESCRIPTION_KEY)) {
-                                    schemaNode.setDescriptionKey(stringValue);
-                                } else {
+                                // if (key.equals(SchemaGenerator.TITLE_KEY)) {
+                                //     schemaNode.setTitleKey(stringValue);
+                                // } else if (key.equals(SchemaGenerator.DESCRIPTION_KEY)) {
+                                //     schemaNode.setDescriptionKey(stringValue);
+                                // } else {
                                     // Handle simple extensions (x-tracked: true)
                                     // we use getPrimitive here so that booleans remain booleans, etc.
                                     schemaNode.setExtension(key, valNode.getPrimitive());
-                                }
+                                // }
 
 
                             } else if (valBase instanceof MapAstNode mapNode) {

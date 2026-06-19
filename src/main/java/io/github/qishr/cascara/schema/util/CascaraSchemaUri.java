@@ -21,8 +21,8 @@ public class CascaraSchemaUri {
     private final String schemaName;
     private final String version;
 
-    public CascaraSchemaUri(Class<?> clazz) {
-        this(Lifecycle.DYNAMIC, clazz.getModule().getName(), clazz.getName(), null);
+    public static CascaraSchemaUri of(Class<?> clazz) {
+        return new CascaraSchemaUri(Lifecycle.DYNAMIC, clazz.getModule().getName(), clazz.getName(), null);
     }
 
     public CascaraSchemaUri(String moduleName, String schemaName, String version) {

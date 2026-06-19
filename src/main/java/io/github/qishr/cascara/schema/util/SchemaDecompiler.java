@@ -7,7 +7,6 @@ import java.util.Map;
 import io.github.qishr.cascara.common.lang.QuoteStyle;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapEntryNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
-import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
 import io.github.qishr.cascara.schema.Schema;

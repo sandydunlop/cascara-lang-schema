@@ -21,9 +21,9 @@ import io.github.qishr.cascara.common.io.UriScheme;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
-import io.github.qishr.cascara.common.lang.factory.ParserFactory;
 import io.github.qishr.cascara.common.lang.processor.Parser;
 import io.github.qishr.cascara.common.service.ServiceException;
+import io.github.qishr.cascara.common.service.ServiceProviderFactory;
 import io.github.qishr.cascara.lang.json.processor.JsonParser;
 
 import io.github.qishr.cascara.schema.Schema;
@@ -100,7 +100,7 @@ public class SchemaResolver {
     }
 
     public Schema getSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) {
-        URI uri = new CascaraSchemaUri(clazz).toUri();
+        URI uri = CascaraSchemaUri.of(clazz).toUri();
         Schema schema = schemaDocCache.get(uri);
         if (schema == null) {
             // This calls the compiler which adds the compiled schema to the cache
@@ -165,7 +165,7 @@ public class SchemaResolver {
     //
 
     private Schema generateSchemaForClass(Class<?> clazz, List<TypeAnalyzer> typeAnalyzers) throws SchemaException {
-        URI originUri = new CascaraSchemaUri(clazz).toUri();
+        URI originUri = CascaraSchemaUri.of(clazz).toUri();
         SchemaCompiler compiler = new SchemaCompiler(this);
         SchemaGenerator generator = new SchemaGenerator();
         if (typeAnalyzers != null) {
@@ -380,7 +380,7 @@ public class SchemaResolver {
             if (contentType.contains("json")) {
                 parser = new JsonParser();
             } else {
-                parser = new ParserFactory().create(contentType);
+                parser = new ServiceProviderFactory().createParser(contentType);
                 if (parser == null) {
                     throw new IllegalStateException("Failed to find parser for " + contentType);
                 }

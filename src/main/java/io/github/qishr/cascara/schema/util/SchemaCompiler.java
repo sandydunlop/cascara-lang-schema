@@ -17,6 +17,7 @@ import io.github.qishr.cascara.common.lang.ast.ScalarAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.internal.CompiledSchema;
@@ -47,7 +48,7 @@ public class SchemaCompiler {
     private static final String ROOT = "root";
     private static final String ITEM = "item";
 
-    private SchemaResolver resolver;
+    private SchemaResolver resolver = Schemas.getResolver();
     private Reporter reporter = new StandardReporter();
 
     @Deprecated
@@ -60,7 +61,7 @@ public class SchemaCompiler {
     }
 
     public SchemaCompiler() {
-
+        this.resolver = Schemas.getResolver();
     }
 
     public SchemaCompiler setReporter(Reporter reporter) {
@@ -90,8 +91,9 @@ public class SchemaCompiler {
         if (originUri == null) {
             AstNode idNode = map.get(SchemaKeyword.ID.asString());
             if (!(idNode instanceof ScalarAstNode scalarId)) {
-                reporter.error(SchemaDiagnosticCode.NO_ID);
-                return null;
+                throw new SchemaException(SchemaDiagnosticCode.NO_ID);
+                // reporter.error(SchemaDiagnosticCode.NO_ID);
+                // return null;
             }
             originUri = URI.create(scalarId.asString());
         }
@@ -107,7 +109,7 @@ public class SchemaCompiler {
             }
         }
         if (name == null || name.isEmpty()) {
-            name = ROOT;
+            name = ROOT; // TODO WHat is name being used for?
         }
 
         // RESOLVE THE META-SCHEMA
@@ -209,6 +211,8 @@ public class SchemaCompiler {
         schemaNode.setOriginUri(originUri);
         schemaNode.setTitle(astNode.getString(SchemaKeyword.TITLE.asString()));
         schemaNode.setDescription(astNode.getString(SchemaKeyword.DESCRIPTION.asString()));
+        schemaNode.setTitleKey(astNode.getString(SchemaGenerator.TITLE_KEY));
+        schemaNode.setDescriptionKey(astNode.getString(SchemaGenerator.DESCRIPTION_KEY));
         schemaNode.setContentMediaType(astNode.getString(SchemaKeyword.CONTENT_MEDIA_TYPE.asString()));
 
         SchemaNode effectiveRoot = (rootSchema == null) ? schemaNode : rootSchema;
@@ -350,25 +354,43 @@ public class SchemaCompiler {
         }
     }
 
-    private void handleExtensions(MapAstNode<?,?> astNode, SchemaNode schemaNode) {
+    private void handleExtensions(MapAstNode<?,?> astNode, BaseSchemaNode schemaNode) {
         // Capture ALL extension keywords (x-load, x-storage, x-cascade, etc.)
         astNode.getEntries().forEach((entry) -> {
             if (entry instanceof MapEntryAstNode node) {
                 AstNode keyBase = node.getKey();
                 if (keyBase instanceof ScalarAstNode keyNode) {
                     String key = keyNode.asString();
-                    if (!SchemaKeyword.exists(key)) { // it's not a standard JSONSchema keyword
-                        AstNode valBase = node.getValue();
+                    if (key != null) {
+                        if (!SchemaKeyword.exists(key)) { // it's not a standard JSONSchema keyword
+                            AstNode valBase = node.getValue();
 
-                        if (valBase instanceof ScalarAstNode valNode) {
-                            // Handle simple extensions (x-tracked: true)
-                            schemaNode.setExtension(key, valNode.getPrimitive());
-                        } else if (valBase instanceof MapAstNode mapNode) {
-                            // Handle object extensions (x-indexed: { name: "...", unique: true })
-                            schemaNode.setExtension(key, convertToMap(mapNode));
-                        } else if (valBase instanceof SequenceAstNode seqNode) {
-                            // Handle array extensions (x-display-columns: [ "title", "date" ])
-                            schemaNode.setExtension(key, convertToList(seqNode));
+                            if (valBase instanceof ScalarAstNode valNode) {
+
+                                // // cascara://organizer/CASC-00028C57
+                                // // TODO: names of title key and description key need
+                                // // to be user-overridable
+
+                                // String stringValue = valNode.asString();
+
+                                // if (key.equals(SchemaGenerator.TITLE_KEY)) {
+                                //     schemaNode.setTitleKey(stringValue);
+                                // } else if (key.equals(SchemaGenerator.DESCRIPTION_KEY)) {
+                                //     schemaNode.setDescriptionKey(stringValue);
+                                // } else {
+                                    // Handle simple extensions (x-tracked: true)
+                                    // we use getPrimitive here so that booleans remain booleans, etc.
+                                    schemaNode.setExtension(key, valNode.getPrimitive());
+                                // }
+
+
+                            } else if (valBase instanceof MapAstNode mapNode) {
+                                // Handle object extensions (x-indexed: { name: "...", unique: true })
+                                schemaNode.setExtension(key, convertToMap(mapNode));
+                            } else if (valBase instanceof SequenceAstNode seqNode) {
+                                // Handle array extensions (x-display-columns: [ "title", "date" ])
+                                schemaNode.setExtension(key, convertToList(seqNode));
+                            }
                         }
                     }
                 }

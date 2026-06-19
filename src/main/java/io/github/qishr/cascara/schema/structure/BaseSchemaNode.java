@@ -17,7 +17,9 @@ import java.util.Map;
 public abstract class BaseSchemaNode implements SchemaNode {
     private SchemaType type;
     private String title;
+    private String titleKey;
     private String description;
+    private String descriptionKey;
     private Object defaultValue;
     protected URI originUri;
     protected String ref;
@@ -68,6 +70,8 @@ public abstract class BaseSchemaNode implements SchemaNode {
     public void setOriginUri(URI originUri) { this.originUri = originUri; }
     public void setTitle(String title) { this.title = title; }
     public void setDescription(String description) { this.description = description; }
+    public void setTitleKey(String titleKey) { this.titleKey = titleKey; }
+    public void setDescriptionKey(String descriptionKey) { this.descriptionKey = descriptionKey; }
     public void setRef(String ref) { this.ref = ref; }
     public void setDefaultValue(Object defaultValue) { this.defaultValue = defaultValue; }
 
@@ -119,7 +123,9 @@ public abstract class BaseSchemaNode implements SchemaNode {
 
     @Override public SchemaType getType() { return type; }
     @Override public String getTitle() { return title; }
+    @Override public String getTitleKey() { return titleKey; }
     @Override public String getDescription() { return description; }
+    @Override public String getDescriptionKey() { return descriptionKey; }
     @Override public Object getDefaultValue() { return defaultValue; }
     @Override public Map<String, SchemaNode> getDefinitions() { return definitions; }
     @Override public List<ValidationRule> getRules() { return rules; }

@@ -17,7 +17,6 @@ import io.github.qishr.cascara.common.lang.annotation.DataField;
 import io.github.qishr.cascara.common.lang.annotation.DataIgnore;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
-import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceSequenceNode;
 import io.github.qishr.cascara.common.service.CapabilityQueries;
@@ -45,6 +44,7 @@ public final class SchemaGenerator {
     // TODO: These should be able to be overridden by the caller
     public static final String TITLE_KEY = "x-i18n-title";
     public static final String DESCRIPTION_KEY = "x-i18n-description";
+    public static final String ENUM_KEY = "x-i18n-enum";
 
     private final Set<Class<?>> processingStack = new HashSet<>();
     private final Map<Class<?>, ReferenceMapNode> definitions = new LinkedHashMap<>();
@@ -65,24 +65,24 @@ public final class SchemaGenerator {
         typeDescriptors.put(typeDescriptor.getJvmType(), typeDescriptor);
     }
 
-    public ReferenceNode generate(Object template) {
+    public ReferenceMapNode generate(Object template) {
         return generate(null, null, null, template);
     }
 
-    public ReferenceNode generate(Class<?> clazz) {
+    public ReferenceMapNode generate(Class<?> clazz) {
         return generate(null, null, clazz, null);
     }
 
-    public ReferenceNode generate(ReferenceMapNode parentDoc, Class<?> clazz) {
+    public ReferenceMapNode generate(ReferenceMapNode parentDoc, Class<?> clazz) {
         return generate(parentDoc, null, clazz, null);
     }
 
-    public ReferenceNode generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz) {
+    public ReferenceMapNode generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz) {
         return generate(parentDoc, fragment, clazz, null);
     }
 
     // TODO: Perhaps fragment should be specified as a SchemaNode or AstNode?
-    public ReferenceNode generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
+    public ReferenceMapNode generate(MapAstNode<?,?> parentDoc, String fragment, Class<?> clazz, Object template) {
         processingStack.clear();
         definitions.clear();
         multiClassDocument = false;
@@ -108,7 +108,7 @@ public final class SchemaGenerator {
             }
         }
 
-        ReferenceMapNode classRoot = generateClassRoot(clazz, template);
+        ReferenceMapNode classRoot = generateClassRoot(clazz, template, multiClassDocument);
 
         if (multiClassDocument) {
             for (Map.Entry<Class<?>, ReferenceMapNode> e : definitions.entrySet()) {
@@ -129,11 +129,17 @@ public final class SchemaGenerator {
         return classRoot;
     }
 
-    private ReferenceMapNode generateClassRoot(Class<?> clazz, Object template) {
+    private ReferenceMapNode generateClassRoot(Class<?> clazz, Object template, boolean multiClassDocument) {
         if (clazz == null) {
             clazz = template.getClass();
         }
         ReferenceMapNode root = new ReferenceMapNode();
+
+        if (!multiClassDocument) {
+            String id = CascaraSchemaUri.of(clazz).toString();
+            root.put(SchemaKeyword.ID.asString(), id);
+        }
+
         fillObjectMetadata(clazz, root);
         root.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.OBJECT.asString()));
 
@@ -226,6 +232,9 @@ public final class SchemaGenerator {
         if (!sf.descriptionKey().isEmpty()) {
             node.put(DESCRIPTION_KEY, scalar(sf.descriptionKey()));
         }
+        if (!sf.enumKey().isEmpty()) {
+            node.put(ENUM_KEY, scalar(sf.enumKey()));
+        }
 
 
         if (field.isAnnotationPresent(ContentMediaType.class)) {
@@ -270,24 +279,10 @@ public final class SchemaGenerator {
                     applyInternalRef(node, type);
                 }
             } else {
-
-
-                // TODO: This is just taking a random type converter?!?!?!
-                // should be using scalar type converter?
-                // TypeDescriptor converter = ServiceProviderLayer.loadProvider(
-                //     TypeDescriptor.class,
-                //     typeConverters.getFirst()
-                // );
-                // converter.toSchema(node);
-
-
                 TypeDescriptor<?> typeDescriptor = getTypeDescriptor(type);
                 if (typeDescriptor instanceof ScalarDescriptor<?> descriptor) {
                     descriptor.populateSchema(node);
                 }
-
-
-
             }
         }
 
@@ -372,7 +367,7 @@ public final class SchemaGenerator {
     }
 
     private void applyExternalRef(ReferenceMapNode node, Class<?> target, Field field) {
-        CascaraSchemaUri schemaUri = new CascaraSchemaUri(target);
+        CascaraSchemaUri schemaUri = CascaraSchemaUri.of(target);
         String schemaUriString = schemaUri.toUri().toString();
         node.put(SchemaKeyword.REF.asString(), scalar(schemaUriString));
     }
@@ -413,10 +408,6 @@ public final class SchemaGenerator {
         }
     }
 
-
-
-
-
     private void fillTypeInfo(ReferenceMapNode node, Class<?> type, Field field) {
         if (type == boolean.class || type == Boolean.class) {
             node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.BOOLEAN.asString()));
@@ -428,13 +419,6 @@ public final class SchemaGenerator {
             node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.NUMBER.asString()));
         } else if (type == String.class || type.isEnum()) {
             node.put(SchemaKeyword.TYPE.asString(), scalar(SchemaType.STRING.asString()));
-            if (type.isEnum()) {
-                ReferenceSequenceNode enumNode = new ReferenceSequenceNode();
-                for (Object ec : type.getEnumConstants()) {
-                    enumNode.add(scalar(ec.toString()));
-                }
-                node.put(SchemaKeyword.ENUM.asString(), enumNode);
-            }
         }
 
         applyConstraints(node, field);
@@ -479,10 +463,6 @@ public final class SchemaGenerator {
             }
         }
     }
-
-
-
-
 
     private void appendDefaultValue(ReferenceMapNode node, Field field, Object instance) {
         if (instance == null) return;

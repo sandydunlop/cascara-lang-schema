@@ -17,6 +17,7 @@ import io.github.qishr.cascara.common.lang.ast.ScalarAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
+import io.github.qishr.cascara.schema.SchemaException;
 import io.github.qishr.cascara.schema.SchemaKeyword;
 import io.github.qishr.cascara.schema.SchemaType;
 import io.github.qishr.cascara.schema.internal.CompiledSchema;
@@ -47,7 +48,7 @@ public class SchemaCompiler {
     private static final String ROOT = "root";
     private static final String ITEM = "item";
 
-    private SchemaResolver resolver;
+    private SchemaResolver resolver = Schemas.getResolver();
     private Reporter reporter = new StandardReporter();
 
     @Deprecated
@@ -60,7 +61,7 @@ public class SchemaCompiler {
     }
 
     public SchemaCompiler() {
-
+        this.resolver = Schemas.getResolver();
     }
 
     public SchemaCompiler setReporter(Reporter reporter) {
@@ -90,8 +91,9 @@ public class SchemaCompiler {
         if (originUri == null) {
             AstNode idNode = map.get(SchemaKeyword.ID.asString());
             if (!(idNode instanceof ScalarAstNode scalarId)) {
-                reporter.error(SchemaDiagnosticCode.NO_ID);
-                return null;
+                throw new SchemaException(SchemaDiagnosticCode.NO_ID);
+                // reporter.error(SchemaDiagnosticCode.NO_ID);
+                // return null;
             }
             originUri = URI.create(scalarId.asString());
         }
@@ -107,7 +109,7 @@ public class SchemaCompiler {
             }
         }
         if (name == null || name.isEmpty()) {
-            name = ROOT;
+            name = ROOT; // TODO WHat is name being used for?
         }
 
         // RESOLVE THE META-SCHEMA

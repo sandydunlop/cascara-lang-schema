@@ -12,5 +12,6 @@ public @interface SchemaProperty {
     String titleKey() default "";
     String description() default "";
     String descriptionKey() default "";
+    String enumKey() default "";
     boolean required() default false;
 }

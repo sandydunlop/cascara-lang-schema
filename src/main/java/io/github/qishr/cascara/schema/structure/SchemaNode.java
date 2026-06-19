@@ -15,8 +15,12 @@ public interface SchemaNode extends AstNode {
     /// The human-readable title
     String getTitle();
 
+    String getTitleKey();
+
     /// The human-readable description
     String getDescription();
+
+    String getDescriptionKey();
 
     // Structural Access
     SchemaNode getProperty(String key);

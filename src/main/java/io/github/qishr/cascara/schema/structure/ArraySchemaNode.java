@@ -32,10 +32,11 @@ public class ArraySchemaNode extends BaseSchemaNode {
         super.validate(node, path, result);
 
         if (node instanceof SequenceAstNode sequence && items != null) {
-            List<? extends AstNode> elements = sequence.getChildren();
-            for (int i = 0; i < elements.size(); i++) {
+            int i = 0;
+            for (AstNode item : sequence.getChildren()) {
                 String itemPath = path + "[" + i + "]";
-                items.validate(elements.get(i), itemPath, result);
+                items.validate(item, itemPath, result);
+                i++;
             }
         }
     }

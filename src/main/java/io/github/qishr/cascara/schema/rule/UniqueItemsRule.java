@@ -23,8 +23,8 @@ public class UniqueItemsRule implements ValidationRule {
         // Bridge to the common logic, but maintaining individual item reporting
         // which requires a loop here to capture specific line/column info per duplicate.
         Set<Object> seen = new HashSet<>();
-        for (int i = 0; i < sequence.getChildren().size(); i++) {
-            AstNode item = sequence.getChildren().get(i);
+        int i = 0;
+        for (AstNode item : sequence.getChildren()) {
             if (item instanceof ScalarAstNode scalar) {
                 Object val = scalar.getPrimitive();
                 if (!seen.add(val)) {
@@ -32,6 +32,7 @@ public class UniqueItemsRule implements ValidationRule {
                     result.addError(path + "[" + i + "]", msg, item.getStartLine(), item.getStartColumn());
                 }
             }
+            i++;
         }
     }
 

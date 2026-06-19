@@ -18,6 +18,12 @@ public class SchemaBuilder {
         generator = new SchemaGenerator();
     }
 
+    public SchemaBuilder() {
+        resolver = Schemas.getResolver();
+        compiler = new SchemaCompiler(resolver);
+        generator = new SchemaGenerator();
+    }
+
     public void registerTypeAnalyzer(TypeAnalyzer ta) {
         generator.registerTypeAnalyzer(ta);
     }

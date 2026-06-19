@@ -9,5 +9,7 @@ import java.lang.annotation.ElementType;
 @Target(ElementType.TYPE)
 public @interface SchemaDefinition {
     String title() default "";
+    String titleKey() default "";
     String description() default "";
+    String descriptionKey() default "";
 }

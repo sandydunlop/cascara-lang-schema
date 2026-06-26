@@ -4,7 +4,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.github.qishr.cascara.common.lang.QuoteStyle;
+import io.github.qishr.cascara.common.lang.util.QuoteStyle;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapEntryNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;

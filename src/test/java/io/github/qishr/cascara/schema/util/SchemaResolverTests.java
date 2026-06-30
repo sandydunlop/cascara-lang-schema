@@ -15,7 +15,7 @@ import io.github.qishr.cascara.common.lang.reference.ReferenceMapNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceNode;
 import io.github.qishr.cascara.common.lang.reference.ReferenceScalarNode;
 import io.github.qishr.cascara.lang.json.ast.JsonNode;
-import io.github.qishr.cascara.lang.json.processor.JsonParser;
+import io.github.qishr.cascara.lang.json.processor.JsonAstParser;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.structure.ArraySchemaNode;
 import io.github.qishr.cascara.schema.structure.LazySchemaNode;
@@ -106,7 +106,7 @@ public class SchemaResolverTests {
               }
                 """;
 
-        JsonParser parser = new JsonParser();
+        JsonAstParser parser = new JsonAstParser();
         JsonNode doc = parser.parse(json);
         SchemaResolver resolver = new SchemaResolver();
         SchemaCompiler compiler = new SchemaCompiler(resolver);
@@ -142,7 +142,7 @@ public class SchemaResolverTests {
     void shouldHandleJsonBackedDocument() {
         // 1. Setup a JSON document
         String json = "{ \"$id\": \"cascara://core/schema-service/dynamic/cascara.schema/json\", \"type\": \"object\" }";
-        JsonParser parser = new JsonParser();
+        JsonAstParser parser = new JsonAstParser();
         JsonNode doc = parser.parse(json);
         URI uri = URI.create("cascara://core/schema-service/dynamic/cascara.schema/json");
 
@@ -172,7 +172,7 @@ public class SchemaResolverTests {
             }
             """;
 
-        JsonParser parser = new JsonParser();
+        JsonAstParser parser = new JsonAstParser();
         JsonNode doc = parser.parse(json);
         SchemaCompiler compiler = new SchemaCompiler(resolver);
 
@@ -210,7 +210,7 @@ public class SchemaResolverTests {
             """;
 
         // 3. Parse and Compile
-        JsonParser parser = new JsonParser();
+        JsonAstParser parser = new JsonAstParser();
         JsonNode doc = parser.parse(json);
         SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema compiled = compiler.compile(doc, docUri);
@@ -253,7 +253,7 @@ public class SchemaResolverTests {
             }
             """;
 
-        JsonParser parser = new JsonParser();
+        JsonAstParser parser = new JsonAstParser();
         JsonNode doc = parser.parse(json);
         SchemaCompiler compiler = new SchemaCompiler(resolver);
         Schema compiled = compiler.compile(doc, docUri);

@@ -141,7 +141,7 @@ public class BasedTests extends SchemaIntegrationTestBase {
     //         assertTrue(map.containsKey("properties"),
     //             "The AST map should contain the String 'properties'");
 
-    //         // Verify the internal representation is a JsonScalarNode (from your JsonParser)
+    //         // Verify the internal representation is a JsonScalarNode (from your JsonAstParser)
     //         assertTrue(firstKey instanceof JsonScalarNode,
     //             "Key should be a JsonScalarNode, but was: " + firstKey.getClass().getName());
     //     }

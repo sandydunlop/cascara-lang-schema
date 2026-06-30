@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 import io.github.qishr.cascara.lang.json.ast.JsonNode;
-import io.github.qishr.cascara.lang.json.processor.JsonParser;
+import io.github.qishr.cascara.lang.json.processor.JsonAstParser;
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.structure.LazySchemaNode;
 import io.github.qishr.cascara.schema.structure.ObjectSchemaNode;
@@ -25,7 +25,7 @@ public class CompilerTests {
         }
         }
         """;
-        JsonParser parser = new JsonParser();
+        JsonAstParser parser = new JsonAstParser();
         JsonNode doc = parser.parse(json);
 
         SchemaResolver resolver = new SchemaResolver();
@@ -44,7 +44,7 @@ public class CompilerTests {
     void compiler_test_01() {
         String json = getStringResource("/io/github/qishr/cascara/schema/util/schema-01.json");
 
-        JsonParser parser = new JsonParser();
+        JsonAstParser parser = new JsonAstParser();
         JsonNode doc = parser.parse(json);
 
         SchemaResolver resolver = new SchemaResolver();

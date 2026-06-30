@@ -5,15 +5,15 @@ import org.junit.jupiter.api.BeforeEach;
 
 public class SchemaIntegrationTestBase {
     // protected ContentLoader mockLoader;
-    // protected SchemaParser jsonParser;
+    // protected SchemaParser JsonAstParser;
     protected SchemaResolver resolver;
 
     @BeforeEach
     void setup() {
         // mockLoader = mock(ContentLoader.class);
 
-        // Bridge: extract the 'content' string from the record to feed the JsonParser
-        // jsonParser = resource -> new JsonParser().parse(resource.content());
+        // Bridge: extract the 'content' string from the record to feed the JsonAstParser
+        // JsonAstParser = resource -> new JsonAstParser().parse(resource.content());
 
         // System Under Test
         resolver = new SchemaResolver();

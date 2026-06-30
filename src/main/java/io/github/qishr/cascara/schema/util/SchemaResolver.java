@@ -21,10 +21,10 @@ import io.github.qishr.cascara.common.io.UriScheme;
 import io.github.qishr.cascara.common.lang.ast.AstNode;
 import io.github.qishr.cascara.common.lang.ast.MapAstNode;
 import io.github.qishr.cascara.common.lang.ast.SequenceAstNode;
-import io.github.qishr.cascara.common.lang.processor.Parser;
+import io.github.qishr.cascara.common.lang.processor.AstParser;
 import io.github.qishr.cascara.common.service.ServiceException;
 import io.github.qishr.cascara.common.service.ServiceProviderFactory;
-import io.github.qishr.cascara.lang.json.processor.JsonParser;
+import io.github.qishr.cascara.lang.json.processor.JsonAstParser;
 
 import io.github.qishr.cascara.schema.Schema;
 import io.github.qishr.cascara.schema.SchemaDiagnosticCode;
@@ -376,9 +376,9 @@ public class SchemaResolver {
             contentType = res.contentType().toString();
         }
         try {
-            Parser<?,?> parser;
+            AstParser<?,?> parser;
             if (contentType.contains("json")) {
-                parser = new JsonParser();
+                parser = new JsonAstParser();
             } else {
                 parser = new ServiceProviderFactory().createParser(contentType);
                 if (parser == null) {
